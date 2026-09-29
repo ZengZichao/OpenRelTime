@@ -1,0 +1,72 @@
+# Test the package on every Python version it claims to support:
+# pyproject.toml declares classifiers for 3.10, 3.11, 3.12 and 3.13 and
+# `requires-python = ">=3.10"`.
+#
+# Scope: a syntax/unused-name lint (the same `ruff --select F,E9` gate
+# OpenRelTime-Studio runs), the unit suite under `tests/`, and the end-to-end
+# suite under `e2e_tests/`.  `mypy` ships in the `dev` extra and is configured
+# in pyproject.toml, but is not wired up as a gate here: pinned for
+# `python_version = "3.10"`, it aborts on numpy's stubs (their `type`
+# statements need 3.12) before it reaches this codebase.
+#
+# The `blb` and `megacc` cases shell out to IQ-TREE and MEGA-CC.  Those tools
+# are not installed here, so those two modules skip; the rest of `e2e_tests/`
+# runs for real.  Unit tests cover both bridges against stubbed executables.
+#
+# The desktop GUI is a separate project, OpenRelTime-Studio, and has its own CI.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: pytest (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package with its test extras
+        # `dev` = pytest, pytest-cov, ruff, mypy; `plot` = matplotlib, which
+        # the `ddbd` plotting test exercises through openreltime.viz.
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --editable ".[dev,plot]"
+
+      - name: Lint (syntax and unused names)
+        run: python -m ruff check . --select F,E9
+
+      - name: Show collected tests
+        run: python -m pytest --collect-only -q
+
+      - name: Run test suite
+        # Test collection is driven by `testpaths` in pyproject.toml.
+        run: python -m pytest -ra
+
+      - name: Run end-to-end suite
+        # Drives the real CLI against the bundled example and golden data.
+        # No --continue-on-collection-errors: a module that cannot even be
+        # imported must fail the job, not be tolerated.
+        run: python -m pytest e2e_tests/cases -ra

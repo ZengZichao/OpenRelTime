@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openreltime"
+version = "0.1.0"
+description = "OpenRelTime: relative rate framework (RRF) molecular dating in Python"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+  { name = "曾子超", email = "zengzichao@sjtu.edu.cn" },
+]
+keywords = [
+    "molecular dating",
+    "phylogenetics",
+    "RelTime",
+    "relative rate framework",
+    "timetree",
+    "CorrTest",
+]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = ["numpy>=1.24", "scipy>=1.10", "pandas>=2.0", "click>=8.1"]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7"]
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "ruff>=0.4", "mypy>=1.8"]
+
+[project.scripts]
+openreltime = "openreltime.cli:main"
+ort = "openreltime.cli:main"
+
+# The desktop GUI ships separately as `OpenRelTime-Studio`
+# (https://github.com/ZengZichao/OpenRelTime-Studio), which builds on this
+# engine's public API.  It contributes no extra, console script or package here.
+
+[project.urls]
+Homepage = "https://github.com/ZengZichao/OpenRelTime"
+Documentation = "https://github.com/ZengZichao/OpenRelTime/tree/main/docs"
+
+[tool.setuptools]
+# Bundle files that MANIFEST.in declares into both the sdist and the wheel
+# (`openreltime` carries in-package, non-code assets).
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["openreltime*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true

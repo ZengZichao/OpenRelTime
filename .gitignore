@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+*.whl
+
+# Testing & coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+.venv-*/
+venv/
+env/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Experiment / reproduction artefacts
+*.log
+reproduce/out/
+
+# AI assistant working directories
+.mimosa/
+
+# End-to-end test artefacts
+e2e_tests/outputs/

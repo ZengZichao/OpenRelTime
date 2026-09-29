@@ -1,0 +1,27 @@
+# Ship the documentation, example and golden-standard data so the paths the
+# docs reference (docs/usage-en.md, docs/usage-zh.md, docs/tutorials/*) resolve
+# for anyone who installs from the source distribution or a checkout.
+#
+# `data/`, `docs/` and `reproduce/` are top-level directories, not Python
+# packages, so setuptools `package-data` cannot place them inside a wheel; they
+# are carried by the source distribution via this file (and by
+# `include-package-data` below), which is what `pip install .` from a checkout
+# and the PyPI sdist use.
+
+include LICENSE
+include README.md
+include README-zh.md
+include CHANGELOG.md
+include CHANGELOG-zh.md
+include CITATION.cff
+include THIRD-PARTY-NOTICES.md
+include THIRD-PARTY-NOTICES-zh.md
+include pyproject.toml
+
+recursive-include data *
+recursive-include docs *
+recursive-include reproduce *
+recursive-include e2e_tests *
+prune e2e_tests/outputs
+
+global-exclude __pycache__ *.py[cod] .DS_Store

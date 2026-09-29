@@ -1,0 +1,53 @@
+cff-version: 1.2.0
+message: >-
+  If you use OpenRelTime, please cite this software and the RelTime
+  methodology papers it implements.
+title: OpenRelTime
+authors:
+  - name: "曾子超"
+    email: "zengzichao@sjtu.edu.cn"
+    orcid: "https://orcid.org/0000-0001-6553-970X"
+version: 0.1.0
+date-released: "2026-09-29"
+repository-code: "https://github.com/ZengZichao/OpenRelTime"
+license: GPL-3.0-or-later
+abstract: >-
+  OpenRelTime is an open-source Python implementation of the relative rate
+  framework (RRF) for non-Bayesian molecular dating, including calibration
+  conversion, analytical confidence intervals, CorrTest rate-autocorrelation
+  testing, birth-death prior (ddBD) estimation and a bag-of-little-bootstraps
+  pipeline.
+keywords:
+  - molecular dating
+  - relative rate framework
+  - phylogenetics
+  - timetree
+  - CorrTest
+references:
+  - type: article
+    title: >-
+      Theoretical foundation of the RelTime method for estimating divergence times
+      from variable evolutionary rates
+    authors:
+      - name: Koichiro Tamura
+      - name: Qiqing Tao
+      - name: Sudhir Kumar
+    journal: Molecular Biology and Evolution
+    volume: 35
+    pages: "1770-1782"
+    year: 2018
+    doi: 10.1093/molbev/msy044
+  - type: article
+    title: >-
+      Reliable confidence intervals for RelTime estimates of evolutionary
+      divergence times
+    authors:
+      - name: Qiqing Tao
+      - name: Koichiro Tamura
+      - name: Beatriz Mello
+      - name: Sudhir Kumar
+    journal: Molecular Biology and Evolution
+    volume: 37
+    pages: "280-290"
+    year: 2020
+    doi: 10.1093/molbev/msz236

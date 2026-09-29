@@ -1,0 +1,4 @@
+node_id	taxon_set	min_bound	max_bound	density	density_params
+-	Homo_sapiens|Pan_troglodytes	6.0	8.5	.	.
+-	Elephas_maximus|Loxodonta_africana	.	.	exponential	offset=60;mean=20
+-	Dasypus_novemcinctus|Choloepus_didactylus	70.0	105.0	.	.

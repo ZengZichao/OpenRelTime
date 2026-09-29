@@ -1,0 +1,9 @@
+# Unrounded R3F CorrScore, captured with reproduce/golden_r3f_fullprec.R
+# (R 4.5.3, ape 5.8.1, phangorn 2.11.1, R.utils 2.13.0, FNN 1.1.4.1).
+# R3F's own corrtest() writes only format(score, digits = 5), which is why
+# example_sr0_corrtest.txt reads "score = 0.9996" and not the full double.
+# sister.resample = 50 was run under set.seed(42), as in reproduce/golden_r3f.R;
+# the resampling RNG is R's, so OpenRelTime's own resampled score is compared
+# only at the band level, not bit-for-bit.
+sr0	0.99959505940763882	P-value < 0.001
+sr50	0.99959082346530792	P-value < 0.001
