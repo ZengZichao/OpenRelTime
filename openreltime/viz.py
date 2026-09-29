@@ -47,8 +47,8 @@ def _require_matplotlib():
         import matplotlib.pyplot as plt
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
-            "matplotlib is required for plotting; install with "
-            "`pip install openreltime[plot]`"
+            "matplotlib is required for plotting; install it with "
+            "`pip install matplotlib` (the package's [plot] extra)"
         ) from exc
     return plt
 

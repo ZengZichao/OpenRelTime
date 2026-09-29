@@ -13,15 +13,24 @@
 
 ## 1. 安装
 
-### 1.1 从源码目录安装
+### 1.1 从源码检出或 Release wheel 安装
 
-> **分发方式。** 本版本以源码形式分发，请在检出目录中用
-> `pip install --editable ".[dev,plot]"` 安装；发布到包索引后会在此处公告。
+> **分发方式。** 本版本以源码，以及挂在
+> [v0.1.0 Release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.0)
+> 上的 sdist 与 wheel 分发；目前未发布到包索引，发布后会在此处公告。
+
+从检出安装：
 
 ```bash
 git clone https://github.com/ZengZichao/OpenRelTime
 cd OpenRelTime
 python -m pip install --editable ".[dev,plot]"   # 核心 + 绘图 + 开发工具
+```
+
+不必克隆，直接从 Release 装 wheel 也可以——`[plot]` 会带上 matplotlib：
+
+```bash
+python -m pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl"
 ```
 
 `plot`（matplotlib 绘图）与 `dev`（pytest、pytest-cov、ruff、mypy，面向开发者）
@@ -372,10 +381,17 @@ cal2  = ort.calibrate(times, cals, taxon_table=table_map)
 致。因此在界面里得到的数值，就是用相同输入跑 CLI 或 API 得到的数值：分析代码始
 终在本引擎内，装或不装图形界面都不会改变它。
 
+两者目前都不在包索引上，请从各自的 Release 一次装两个 wheel：
+
 ```bash
-pip install OpenRelTime-Studio     # 会自动装入本引擎作为依赖
+pip install \
+  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl" \
+  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.0/openreltime_studio-0.1.0-py3-none-any.whl"
 openreltime-studio
 ```
+
+Apple Silicon 上还可以直接取 Studio 的 Release 附件
+`OpenRelTimeStudio-v0.1.0-macOS-arm64.zip`，解压即用，完全不需要 Python。
 
 * 主页：<https://github.com/ZengZichao/OpenRelTime-Studio>
 * 界面能力：完整的中英双语界面（「视图 ▸ 语言」即时切换）、浅色/深色两套主题

@@ -15,16 +15,25 @@ limitations see [methods.md](methods.md).
 
 ## 1. Installation
 
-### 1.1 From a source checkout
+### 1.1 From a source checkout or a release wheel
 
-> **Distribution.** This release is distributed as source. Install with
-> `pip install --editable ".[dev,plot]"` from a checkout; an index release will
-> be announced here.
+> **Distribution.** This release ships as source plus the sdist and wheel
+> attached to [the v0.1.0 release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.0).
+> It is not on a package index yet; an index release will be announced here.
+
+From a checkout:
 
 ```bash
 git clone https://github.com/ZengZichao/OpenRelTime
 cd OpenRelTime
 python -m pip install --editable ".[dev,plot]"   # core + plotting + dev tools
+```
+
+Or without a clone, straight from the release — the `[plot]` extra pulls in
+matplotlib:
+
+```bash
+python -m pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl"
 ```
 
 `plot` (matplotlib visualisation) and `dev` (pytest, pytest-cov, ruff, mypy for
@@ -404,10 +413,18 @@ script does — so every number it produces is the number you would get from the
 CLI or the API with the same inputs (the analysis code itself lives here, and
 nothing about it changes when you add or remove the GUI).
 
+Neither project is on a package index yet, so install both wheels from their
+releases:
+
 ```bash
-pip install OpenRelTime-Studio     # pulls in this engine as a dependency
+pip install \
+  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl" \
+  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.0/openreltime_studio-0.1.0-py3-none-any.whl"
 openreltime-studio
 ```
+
+On Apple Silicon, Studio's release also attaches a prebuilt
+`OpenRelTimeStudio-v0.1.0-macOS-arm64.zip` that needs no Python at all.
 
 * Home page: <https://github.com/ZengZichao/OpenRelTime-Studio>
 * Interface capabilities: a fully bilingual UI (English / 简体中文, switched live from

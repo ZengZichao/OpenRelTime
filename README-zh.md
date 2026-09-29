@@ -45,8 +45,11 @@ OpenRelTime 在 274-tip 哺乳动物树上与 R3F 数值一致：回归斜率 1.
 
 ## 安装
 
-> **分发方式。** 本版本以源码形式分发，请在检出目录中用
-> `pip install --editable ".[dev,plot]"` 安装；发布到包索引后会在此处公告。
+> **分发方式。** 本版本以源码，以及挂在
+> [v0.1.0 Release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.0)
+> 上的 sdist 与 wheel 分发；目前未发布到包索引，发布后会在此处公告。
+
+从检出安装：
 
 ```bash
 git clone https://github.com/ZengZichao/OpenRelTime
@@ -54,9 +57,15 @@ cd OpenRelTime
 pip install --editable ".[dev,plot]"   # 核心（numpy、scipy、pandas、click）
                                        # + matplotlib 可视化（[plot]）
                                        # + pytest/ruff/mypy（[dev]，开发者）
-
-pip install OpenRelTime-Studio         # 桌面图形界面——独立产品（见下文）
 ```
+
+或者直接从 GitHub 安装已发布的 wheel——不必克隆，`[plot]` 会带上 matplotlib：
+
+```bash
+pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl"
+```
+
+桌面图形界面是独立产品，另行安装（见下文）。
 
 `plot` 与 `dev` 是本包声明的全部可选依赖组，需要多组时合并书写，例如
 `".[plot,dev]"`。
@@ -76,12 +85,18 @@ Newick 或 NEXUS 树，运行 RRF，在画布上点选内部节点设置校正�
 以及一棵自带演示校正点的内置示例树。
 
 它**不属于**本仓库，也**不是**从本仓库安装的：Studio 是一款独立项目，把本引擎当作
-普通第三方依赖来使用。
+普通第三方依赖来使用。两者目前都不在包索引上，所以从各自的 Release 一次装两个
+wheel：
 
 ```bash
-pip install OpenRelTime-Studio     # 会自动装入本引擎作为依赖
+pip install \
+  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl" \
+  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.0/openreltime_studio-0.1.0-py3-none-any.whl"
 openreltime-studio
 ```
+
+Apple Silicon 上还可以直接取 Studio 的 Release 附件
+`OpenRelTimeStudio-v0.1.0-macOS-arm64.zip`，解压即用，完全不需要 Python。
 
 主页：<https://github.com/ZengZichao/OpenRelTime-Studio> · 图形界面手册见该项目
 自己的文档。只安装本引擎时，上文的 Python API 与全部命令行子命令都不受影响

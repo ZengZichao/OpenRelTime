@@ -47,9 +47,11 @@ R3F lacks — calibration conversion and analytical confidence intervals (msz236
 
 ## Installation
 
-> **Distribution.** This release is distributed as source. Install with
-> `pip install --editable ".[dev,plot]"` from a checkout; an index release will
-> be announced here.
+> **Distribution.** This release ships as source plus the sdist and wheel
+> attached to [the v0.1.0 release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.0).
+> It is not on a package index yet; an index release will be announced here.
+
+From a checkout:
 
 ```bash
 git clone https://github.com/ZengZichao/OpenRelTime
@@ -57,9 +59,16 @@ cd OpenRelTime
 pip install --editable ".[dev,plot]"   # core (numpy, scipy, pandas, click)
                                        # + matplotlib visualisation ([plot])
                                        # + pytest/ruff/mypy ([dev], contributors)
-
-pip install OpenRelTime-Studio         # the desktop GUI — a separate product (see below)
 ```
+
+Or install the released wheel directly from GitHub — no clone, and the `[plot]`
+extra brings matplotlib:
+
+```bash
+pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl"
+```
+
+The desktop GUI is a separate product, installed separately (see below).
 
 `plot` and `dev` are the only extras the package declares; combine them in one
 call, e.g. `".[plot,dev]"`.
@@ -81,12 +90,18 @@ light and dark themes, a hand-drawn vector SVG icon, and a built-in example tree
 with demo calibrations so first-time users need no data.
 
 It is **not** part of this repository and is **not** installed from it.  It ships
-as its own project and depends on the engine as an ordinary third-party package:
+as its own project and depends on the engine as an ordinary third-party package.
+Neither is on an index yet, so install both wheels from their releases:
 
 ```bash
-pip install OpenRelTime-Studio     # pulls in this engine as a dependency
+pip install \
+  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl" \
+  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.0/openreltime_studio-0.1.0-py3-none-any.whl"
 openreltime-studio
 ```
+
+On Apple Silicon, Studio's release also attaches a prebuilt
+`OpenRelTimeStudio-v0.1.0-macOS-arm64.zip` that needs no Python at all.
 
 Home page: <https://github.com/ZengZichao/OpenRelTime-Studio> ·
 GUI manual: see that project's documentation.  Installing the engine alone leaves
