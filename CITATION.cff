@@ -8,6 +8,7 @@ authors:
     email: "zengzichao@sjtu.edu.cn"
     orcid: "https://orcid.org/0000-0001-6553-970X"
 version: 0.1.0
+doi: "10.5281/zenodo.23053146"
 date-released: "2026-09-29"
 repository-code: "https://github.com/ZengZichao/OpenRelTime"
 license: GPL-3.0-or-later

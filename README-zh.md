@@ -2,6 +2,8 @@
 
 **语言：中文** · [English](README.md)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053145.svg)](https://doi.org/10.5281/zenodo.23053145)
+
 **OpenRelTime** 是相对速率框架（Relative Rate Framework, RRF；Tamura et al.
 2018, *MBE* 35:1770-1782）的开源 Python 实现，也是 MEGA 中 RelTime 分子定年
 方法的核心算法。
@@ -20,11 +22,13 @@ little bootstraps，轻量自助重采样）管线。所有功能都提供 Pytho
 
 ```
 @software{openreltime,
-  author = {曾, 子超},
-  title  = {OpenRelTime: relative rate framework based molecular dating in Python},
-  year   = {2026},
-  url    = {https://github.com/ZengZichao/OpenRelTime},
-  note   = {v0.1.0}
+  author    = {曾, 子超},
+  title     = {OpenRelTime: relative rate framework based molecular dating in Python},
+  year      = {2026},
+  version   = {v0.1.0},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23053146},
+  url       = {https://github.com/ZengZichao/OpenRelTime}
 }
 ```
 
@@ -219,7 +223,11 @@ python -m pytest tests/
 本项目采用 GPL-3.0-or-later（见 `LICENSE`）。对 R3F、MEGA 源码与 ape 的行为
 参考与常数引用，逐项记录在 `THIRD-PARTY-NOTICES-zh.md`。数据许可见
 `data/PROVENANCE-zh.md`。CorrTest 仓库没有提供许可证，本项目未复制它的任何代码，
-只引用 Tao et al. (2019) 已发表的常数。引用方式见 `CITATION.cff`。
+只引用 Tao et al. (2019) 已发表的常数。引用方式见 `CITATION.cff`。v0.1.0 已在
+Zenodo 存档，版本 DOI 为
+[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146)；跨版本引用软件
+整体可用 concept DOI
+[10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145)。
 
 ## 作者
 

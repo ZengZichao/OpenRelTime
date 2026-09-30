@@ -2,6 +2,8 @@
 
 **Language: English** · [中文](README-zh.md)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053145.svg)](https://doi.org/10.5281/zenodo.23053145)
+
 **OpenRelTime** is an open-source Python implementation of the **relative
 rate framework (RRF)** for non-Bayesian molecular dating (Tamura et al.
 2018, *MBE* 35:1770-1782), the method behind RelTime in MEGA.  It estimates
@@ -20,11 +22,13 @@ or the command line.
 
 ```
 @software{openreltime,
-  author = {曾, 子超},
-  title  = {OpenRelTime: relative rate framework based molecular dating in Python},
-  year   = {2026},
-  url    = {https://github.com/ZengZichao/OpenRelTime},
-  note   = {v0.1.0}
+  author    = {曾, 子超},
+  title     = {OpenRelTime: relative rate framework based molecular dating in Python},
+  year      = {2026},
+  version   = {v0.1.0},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23053146},
+  url       = {https://github.com/ZengZichao/OpenRelTime}
 }
 ```
 
@@ -235,4 +239,7 @@ only published constants of Tao et al. (2019) are used.
 曾子超 (Zichao Zeng) · [zengzichao@sjtu.edu.cn](mailto:zengzichao@sjtu.edu.cn) ·
 [ORCID 0000-0001-6553-970X](https://orcid.org/0000-0001-6553-970X)
 
-The preferred citation is recorded in [`CITATION.cff`](CITATION.cff).
+The preferred citation is recorded in [`CITATION.cff`](CITATION.cff). v0.1.0 is
+archived on Zenodo at [10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146);
+cite [10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145) for the
+software as a whole across versions.
