@@ -221,7 +221,7 @@ def rates_times(tree, outgroup, fmt, resolve, mean, normalize, plot, r3f_compat,
         click.echo(str(p))
 
 
-@cli.command()
+@cli.command(name="calibrate")
 @click.option("-i", "--input", "tree", required=True)
 @click.option("-c", "--calibrations", required=True, help="calibrations.tsv (see docs).")
 @click.option("--outgroup", default=None)
