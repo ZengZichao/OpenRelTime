@@ -1,0 +1,26 @@
+name: Feature request / 功能建议
+description: Suggest an idea for OpenRelTime / 为 OpenRelTime 提出新功能建议
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! 感谢建议，内容可中英任选。
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / 要解决的问题
+      description: What are you trying to achieve, and what is missing today? / 你想完成什么，目前缺什么？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution / 建议方案
+      description: CLI / API sketch welcome. / 欢迎给出 CLI 或 API 的示意。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered / 已考虑的替代方案

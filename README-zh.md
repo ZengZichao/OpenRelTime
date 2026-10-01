@@ -3,6 +3,7 @@
 **语言：中文** · [English](README.md)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053145.svg)](https://doi.org/10.5281/zenodo.23053145)
+[![CI](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml)
 
 **OpenRelTime** 是相对速率框架（Relative Rate Framework, RRF；Tamura et al.
 2018, *MBE* 35:1770-1782）的开源 Python 实现，也是 MEGA 中 RelTime 分子定年

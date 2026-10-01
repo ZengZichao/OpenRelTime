@@ -3,6 +3,7 @@
 **Language: English** · [中文](README-zh.md)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053145.svg)](https://doi.org/10.5281/zenodo.23053145)
+[![CI](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml)
 
 **OpenRelTime** is an open-source Python implementation of the **relative
 rate framework (RRF)** for non-Bayesian molecular dating (Tamura et al.

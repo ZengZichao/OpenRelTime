@@ -1,0 +1,13 @@
+# Oldest runtime-dependency versions that pyproject.toml claims to support.
+# Used by the CI `minimum-versions` job (via PIP_CONSTRAINT) to keep the
+# declared floors honest.  Dev tools (pytest/ruff/mypy) are deliberately left
+# floating; only runtime dependencies are pinned here.
+#
+# numpy 2.0 is required (the code uses numpy.trapezoid); scipy 1.13 and
+# pandas 2.2.2 are the first releases compatible with the numpy 2 ABI, and
+# matplotlib 3.9 the first plot line tested against it.
+numpy==2.0.2
+scipy==1.13.1
+pandas==2.2.2
+click==8.1.8
+matplotlib==3.9.4
