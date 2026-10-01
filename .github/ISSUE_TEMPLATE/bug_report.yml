@@ -1,0 +1,51 @@
+name: Bug report / 问题报告
+description: Report a problem with OpenRelTime / 报告 OpenRelTime 的问题（中英文均可）
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! 感谢反馈，描述可中英任选。
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description / 问题描述
+      description: What happened, and what did you expect instead? / 实际发生了什么，期望是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      description: Commands and input files (tree, calibrations, FASTA) that trigger the problem. / 触发问题的完整命令与输入文件。
+      placeholder: |
+        1. openreltime rrf --tree example.nwk ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: OpenRelTime version / 版本
+      description: "Output of `openreltime --version`, or the commit hash if installed from source."
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Python & OS / Python 版本与操作系统
+      placeholder: "Python 3.12.3, Ubuntu 24.04"
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Full traceback / 完整报错信息
+      render: shell
+  - type: checkboxes
+    id: search
+    attributes:
+      label: Before submitting / 提交前确认
+      options:
+        - label: I searched existing open and closed issues / 已检索过既有 issue
+          required: true

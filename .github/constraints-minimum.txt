@@ -1,0 +1,9 @@
+# Oldest runtime-dependency versions that pyproject.toml claims to support.
+# Used by the CI `minimum-versions` job (via PIP_CONSTRAINT) to keep the
+# declared floors honest.  Dev tools (pytest/ruff/mypy) are deliberately left
+# floating; only runtime dependencies are pinned here.
+numpy==1.24.4
+scipy==1.10.1
+pandas==2.0.3
+click==8.1.8
+matplotlib==3.7.5
