@@ -7,11 +7,18 @@ authors:
   - name: "曾子超"
     email: "zengzichao@sjtu.edu.cn"
     orcid: "https://orcid.org/0000-0001-6553-970X"
+  - name: "王寅炤"
+    email: "wyz@sjtu.edu.cn"
+    orcid: "https://orcid.org/0000-0001-8715-1386"
 version: 0.1.0
 doi: "10.5281/zenodo.23053146"
 date-released: "2026-09-29"
 repository-code: "https://github.com/ZengZichao/OpenRelTime"
 license: GPL-3.0-or-later
+funding: >-
+  This work was supported by the National Natural Science Foundation of China
+  [grant numbers 42422209, 42272354] and the National Key Research and
+  Development Program of China [grant number 2023YFC3108600].
 abstract: >-
   OpenRelTime is an open-source Python implementation of the relative rate
   framework (RRF) for non-Bayesian molecular dating, including calibration

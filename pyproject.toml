@@ -11,6 +11,7 @@ requires-python = ">=3.10"
 license = { text = "GPL-3.0-or-later" }
 authors = [
   { name = "曾子超", email = "zengzichao@sjtu.edu.cn" },
+  { name = "王寅炤", email = "wyz@sjtu.edu.cn" },
 ]
 keywords = [
     "molecular dating",
