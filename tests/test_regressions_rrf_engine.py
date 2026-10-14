@@ -91,6 +91,9 @@ CHAIN_SUPPLIER_TIME = 1.0302173346241075
 CHAIN_ROOT_TIME = 0.3664331954752665
 
 
+
+pytestmark = pytest.mark.gate("G1")
+
 def _engine(newick: str, mean: str, *, threshold: Optional[float] = None) -> RrfEngine:
     tree = parse_newick(newick)
     engine = RrfEngine(

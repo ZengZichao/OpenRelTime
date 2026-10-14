@@ -22,6 +22,12 @@ External-process policy: the executable is resolved and validated up front;
 every token of the command is checked against a strict allow-list (no shell
 metacharacters) and the process is started from an argument *list* with
 ``shell=False``.  No command string is ever assembled.
+
+Provenance: no IQ-TREE release is pinned in code or CI, so ``blb`` probes the
+executable it is about to use (``--version``, advisory) and writes
+``blb_report.json`` next to its two CSV tables, recording the effective
+parameters, the seed, the IQ-TREE banner and the warnings -- the same report
+contract the dating, calibration and interval analyses honour.
 """
 
 from __future__ import annotations
@@ -36,8 +42,8 @@ import numpy as np
 import pandas as pd
 
 from . import _constants as C
-from ._external import resolve_executable, run_tool
-from .report import TimeResult
+from ._external import probe_version, resolve_executable, run_tool
+from .report import TimeResult, write_report
 from .times import rrf_times
 from .treeio import read_tree
 
@@ -144,13 +150,20 @@ def blb(
     -------
     pandas.DataFrame
         Columns ``node_id, clade_size, n_replicates, topology_ok,
-        median_time, ci_lower, ci_upper``.  Also writes
-        ``blb_summary.csv`` and ``blb_replicates.csv`` into *workdir*.
+        median_time, ci_lower, ci_upper``.  Also writes ``blb_summary.csv``,
+        ``blb_replicates.csv`` and ``blb_report.json`` (parameters, the
+        inferred seed, the IQ-TREE banner the run was performed with, and the
+        warnings) into *workdir*.
     """
     alignment = Path(alignment)
     if not alignment.exists():
         raise FileNotFoundError(f"alignment not found: {alignment}")
     executable = resolve_executable(iqtree)
+    iqtree_version, version_notes = probe_version(
+        executable, tool="iqtree", runner=run_tool
+    )
+    notes: list[str] = list(version_notes)
+    logger.info("IQ-TREE version recorded for the report: %s", iqtree_version)
     if not (C.BLB_GAMMA_RANGE[0] - 1e-9 <= gamma <= C.BLB_GAMMA_RANGE[1] + 1e-9):
         raise ValueError(f"gamma must be within {C.BLB_GAMMA_RANGE}, got {gamma}")
     if int(n_subsample) < 1 or int(n_replicate) < 1:
@@ -264,6 +277,13 @@ def blb(
             }
         )
     if thin_clades:
+        notes.append(
+            f"{len(thin_clades)} clade(s) recovered in fewer than two replicates "
+            f"(node ids "
+            + ", ".join(str(nid) for nid in thin_clades[:10])
+            + (" ..." if len(thin_clades) > 10 else "")
+            + "): ci_lower/ci_upper are NaN, no interval exists for them"
+        )
         logger.warning(
             "no confidence interval can be formed for %d clade(s) recovered in "
             "fewer than two replicates (node ids %s): ci_lower/ci_upper are NaN",
@@ -272,14 +292,38 @@ def blb(
             + (" ..." if len(thin_clades) > 10 else ""),
         )
     table = pd.DataFrame(agg_rows)
-    table.to_csv(out_dir / "blb_summary.csv", index=False)
+    summary_path = out_dir / "blb_summary.csv"
+    table.to_csv(summary_path, index=False)
+    replicates_path = out_dir / "blb_replicates.csv"
     rep_frames = []
     for i, res in enumerate(replicate_results):
         frame = res.to_pandas()
         frame.insert(0, "replicate", i)
         rep_frames.append(frame)
-    pd.concat(rep_frames, ignore_index=True).to_csv(
-        out_dir / "blb_replicates.csv", index=False
-    )
-    logger.info("BLB summary written to %s", out_dir / "blb_summary.csv")
+    pd.concat(rep_frames, ignore_index=True).to_csv(replicates_path, index=False)
+    logger.info("BLB summary written to %s", summary_path)
+    report_payload: dict[str, Any] = {
+        "analysis": "blb",
+        "parameters": {
+            "alignment": str(alignment),
+            "iqtree": executable,
+            "outgroup": sorted(outgroup) if outgroup else None,
+            "gamma": float(gamma),
+            "n_subsample": int(n_subsample),
+            "n_replicate": int(n_replicate),
+            "n_replicates_run": len(replicate_results),
+            "iqtree_args": extra_args,
+            "seed": int(seed),
+            "resolve_polytomy": resolve_polytomy,
+            "workdir": str(out_dir),
+            **params,
+        },
+        "warnings": list(notes),
+        # the release actually invoked: nothing pins IQ-TREE, so this is the
+        # only place the run can be attributed to a version
+        "tool": {"name": "iqtree", "version": iqtree_version},
+        "n_nodes": int(len(table)),
+        "artefacts": [str(summary_path), str(replicates_path)],
+    }
+    write_report(out_dir / "blb", report_payload)
     return table

@@ -2,9 +2,9 @@
 # docs reference (docs/usage-en.md, docs/usage-zh.md, docs/tutorials/*) resolve
 # for anyone who installs from the source distribution or a checkout.
 #
-# `data/`, `docs/` and `reproduce/` are top-level directories, not Python
-# packages, so setuptools `package-data` cannot place them inside a wheel; they
-# are carried by the source distribution via this file (and by
+# `data/`, `docs/`, `reproduce/` and `figures/` are top-level directories, not
+# Python packages, so setuptools `package-data` cannot place them inside a
+# wheel; they are carried by the source distribution via this file (and by
 # `include-package-data` below), which is what `pip install .` from a checkout
 # and the PyPI sdist use.
 
@@ -21,6 +21,10 @@ include pyproject.toml
 recursive-include data *
 recursive-include docs *
 recursive-include reproduce *
+# The manuscript's figure scripts and the -data files they draw from
+# (`figures/README.md`).  Restricted to source types, never `*`: a local render
+# with `--outdir figures` would otherwise drop PDF/PNG artwork into the sdist.
+recursive-include figures *.py *.json *.md
 recursive-include e2e_tests *
 prune e2e_tests/outputs
 

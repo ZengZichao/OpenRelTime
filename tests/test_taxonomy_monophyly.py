@@ -1,4 +1,4 @@
-"""Monophyly assessment and outgroup complete-clade checking (G8 gate).
+"""Monophyly assessment and outgroup complete-clade checking (G5 gate).
 
 Covers the two outgroup input forms (single tip / multiple tips), the
 multi-tip complete-clade (MRCA completeness) requirement, group-name
@@ -32,6 +32,9 @@ TREE = (
     "(Elephas_maximus:0.5,Loxodonta_africana:0.6):0.7):0.8):0.0;"
 )
 
+
+
+pytestmark = pytest.mark.gate("G5")
 
 @pytest.fixture()
 def tree():

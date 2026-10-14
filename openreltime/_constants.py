@@ -22,7 +22,9 @@ from typing import Optional
 EPS_R3F: float = 10e-20  # 1e-19, R3F literal ``10e-20``
 EPS_R3F_SMALL: float = 1e-20  # R3F literal ``1e-20``
 
-#: Fraction of zero-length branches above which a warning is raised.
+#: Fraction of zero-length branches above which a warning is raised.  This is
+#: the live threshold: :func:`openreltime.treeio.read_tree` compares against it
+#: rather than against a literal, so retuning the guard means editing one line.
 #: Source: R3F/R/rrf_times.R lines 64-69.
 ZERO_BRLEN_WARN_FRACTION: float = 0.10
 
@@ -40,7 +42,10 @@ RATE_RATIO_THRESHOLD: float = 20.0
 #: Source: R3F/R/rrf_rates.R lines 250-336 (no guard) vs rrf_times.R 353-373.
 RATE_RATIO_GUARD_DISABLED: Optional[float] = None
 
-#: Minimum number of ingroup tips required after outgroup removal.
+#: Minimum number of ingroup tips required, both for a tree as read and after
+#: outgroup removal.  Live threshold: enforced by two guards in
+#: :func:`openreltime.treeio.read_tree`, which raise against this constant so a
+#: relaxed assertion in the test suite is the only way to change it.
 MIN_INGROUP_TIPS: int = 3
 
 #: Maximum iterations for the calibration violation-adjustment loop.
@@ -114,6 +119,6 @@ BLB_GAMMA_RANGE: tuple[float, float] = (0.6, 0.9)
 # Software metadata
 # ---------------------------------------------------------------------------
 
-VERSION: str = "0.1.0"
+VERSION: str = "0.1.1"
 SOFTWARE_NAME: str = "OpenRelTime"
 SOFTWARE_URL: str = "https://github.com/ZengZichao/OpenRelTime"

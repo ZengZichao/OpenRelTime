@@ -27,7 +27,7 @@ MEGA's RelTime applies the RRF analytical solution *and* an additional
 likelihood-ratio-test (LRT) refinement in which daughter branches whose
 rates do not differ significantly are constrained to the ancestral rate.
 That step requires the sequence alignment and maximum-likelihood branch
-re-optimisation.  **OpenRelTime 0.1.0 implements the analytical RRF layer
+re-optimisation.  **OpenRelTime 0.1.1 implements the analytical RRF layer
 only** — the same layer that R3F implements — so results are expected to be
 *highly correlated* with MEGA RelTime but not identical.  Report
 correlations, not equality, when comparing against MEGA.
@@ -36,12 +36,18 @@ correlations, not equality, when comparing against MEGA.
 
 With calibration constraints, a global time factor `f` is chosen so that
 `f * t_node` lies within every `[min, max]` interval (feasible-intersection
-midpoint).  When constraints cannot be jointly satisfied, the lineage
-responsible is adjusted: its rate is scaled so the node age reaches the
-violated bound exactly, the scaling is propagated to all descendants, and
-the procedure repeats (hard-bound semantics of Tamura et al. 2013 as
-described by msz236), with a cap of 100 iterations after which conflicting
-constraints are reported.
+midpoint).  A bound set that supplies only minima, or only maxima, takes its
+finite edge instead -- `f = max(min/t)` or `f = min(max/t)` -- which puts the
+binding node exactly on that bound and keeps the answer invariant to the time
+unit the bounds are stated in.  When constraints cannot be jointly satisfied,
+the lineage responsible is adjusted: its rate is scaled so the node age reaches
+the violated bound exactly, the scaling is propagated to all descendants, and
+the procedure repeats (hard-bound semantics of Tamura et al. 2013 as described
+by msz236), with a cap of 100 iterations after which conflicting constraints are
+reported.  Reporting is not limited to the rows that were violated: once the
+loop stops, every emitted node age is re-checked for non-negativity and for the
+tree's own parent--child ordering, and a converged solution that fails either
+raises with the offending node ids rather than being returned with a warning.
 
 The **effective bounds** method (msz236) converts probability densities into
 data-derived bounds: per replicate, two dates are sampled from each density

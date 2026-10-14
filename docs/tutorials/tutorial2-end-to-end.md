@@ -39,17 +39,39 @@ ci.write("mam_ci")
 ```
 
 `calibrations.tsv` example (tab-separated; `.` marks an empty cell, every row
-carries all six fields):
+carries all six fields).  These four rows are a **worked set**, not just a
+format sketch: three hard bounds plus one row carrying a density *and* its own
+hard bounds, chosen so that a single global time factor can satisfy all four.
+On the shipped 274-tip benchmark (`data/examples/example.nwk`, rooted on the
+three monotremes) they give `f = 371.60` under `method="bounds"` and solve under
+`method="effective"` too, with no warning on either run.  The bounds are still
+illustrative soft bounds, not suggested fossil constraints.
 
 ```
 node_id	taxon_set	min_bound	max_bound	density	density_params
--	Homo_sapiens|Pan_troglodytes	6.0	8.5	.	.
--	Elephas_maximus|Loxodonta_africana	.	.	exponential	offset=60;mean=20
--	Dasypus_novemcinctus|Choloepus_didactylus	70.0	105.0	.	.
+-	Homo_sapiens|Pan_troglodytes	5.0	8.0	.	.
+-	Mus_musculus|Rattus_norvegicus	12.0	18.0	.	.
+-	Dasypus_novemcinctus|Choloepus_didactylus	43.0	52.0	.	.
+-	Elephas_maximus|Loxodonta_africana	1.5	4.5	normal	mean=2.7;sd=0.3
 ```
 
-These rows illustrate the file format; the bounds are arbitrary values, not
-suggested fossil constraints.  See `data/examples/README.md`.
+Two rules decide whether a table like this runs at all, and both stop the solve
+instead of quietly working around the problem:
+
+* a row with a density but **no** hard bound constrains nothing under
+  `method="bounds"` and is rejected when the table is parsed.  The fourth row
+  therefore carries `1.5`/`4.5` as well as the density: step 3a uses those
+  bounds, step 3b replaces them with the dates it samples;
+* rows that no rate rescaling of the tree can satisfy **jointly** raise
+  `ValueError`, naming the negative ages and the parent-child inversions.  In
+  0.1.0 the same set came back as a result carrying warnings.  The previous,
+  placeholder version of this table — a density-only `Elephas`/`Loxodonta` row
+  beside a `70`–`105` `Dasypus`/`Choloepus` bound — was one such set, and the
+  shipped `data/examples/example_calibrations.tsv` still is one: it is
+  documented as a format illustration that is expected to fail, see
+  `data/examples/README.md`.  For a table that runs as it stands use
+  `data/examples/example_calibrations_feasible.tsv` — the same four hard bounds
+  without the density row.
 
 > Step 4 qualifies a **bounds** calibration, because that is the result it is
 > handed.  `confidence_interval` reproduces the estimator behind whatever

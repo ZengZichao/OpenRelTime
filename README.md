@@ -26,9 +26,9 @@ or the command line.
   author    = {曾, 子超},
   title     = {OpenRelTime: relative rate framework based molecular dating in Python},
   year      = {2026},
-  version   = {v0.1.0},
+  version   = {v0.1.1},
   publisher = {Zenodo},
-  doi       = {10.5281/zenodo.23053146},
+  doi       = {10.5281/zenodo.23053145},
   url       = {https://github.com/ZengZichao/OpenRelTime}
 }
 ```
@@ -53,7 +53,7 @@ R3F lacks — calibration conversion and analytical confidence intervals (msz236
 ## Installation
 
 > **Distribution.** This release ships as source plus the sdist and wheel
-> attached to [the v0.1.0 release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.0).
+> attached to [the v0.1.1 release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1).
 > It is not on a package index yet; an index release will be announced here.
 
 From a checkout:
@@ -70,7 +70,7 @@ Or install the released wheel directly from GitHub — no clone, and the `[plot]
 extra brings matplotlib:
 
 ```bash
-pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl"
+pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl"
 ```
 
 The desktop GUI is a separate product, installed separately (see below).
@@ -79,9 +79,15 @@ The desktop GUI is a separate product, installed separately (see below).
 call, e.g. `".[plot,dev]"`.
 
 Requirements: Python >= 3.10, Linux/macOS/Windows.  There are no compiled
-extensions; installation takes seconds.  CI runs the test suite on Linux and
-macOS across Python 3.10-3.13 (`.github/workflows/ci.yml`); Windows is a
-declared target but is not exercised by CI (see `docs/validation.md`).
+extensions; installation takes seconds.  CI runs the test suite on Linux
+(`ubuntu-latest`) across Python 3.10, 3.11, 3.12 and 3.13, and on macOS
+(`macos-latest`) on Python 3.13 only — the three older macOS combinations are
+excluded from the matrix in `.github/workflows/ci.yml` to keep the runner queue
+short, so macOS is a single-interpreter check rather than a 3.10-3.13 claim.
+Windows (`windows-latest`) runs both the engine and the end-to-end suites in a
+separate job on Python 3.13; the job was added for 0.1.1, so its first evidence
+is the next Actions run (see `docs/validation.md` for the tested-vs-claimed
+breakdown and for the one Windows limitation the suites do not cover).
 
 ## OpenRelTime Studio (desktop GUI) — separate product
 
@@ -100,13 +106,13 @@ Neither is on an index yet, so install both wheels from their releases:
 
 ```bash
 pip install \
-  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl" \
-  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.0/openreltime_studio-0.1.0-py3-none-any.whl"
+  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl" \
+  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.1/openreltime_studio-0.1.1-py3-none-any.whl"
 openreltime-studio
 ```
 
 On Apple Silicon, Studio's release also attaches a prebuilt
-`OpenRelTimeStudio-v0.1.0-macOS-arm64.zip` that needs no Python at all.
+`OpenRelTimeStudio-v0.1.1-macOS-arm64.zip` that needs no Python at all.
 
 Home page: <https://github.com/ZengZichao/OpenRelTime-Studio> ·
 GUI manual: see that project's documentation.  Installing the engine alone leaves
@@ -190,6 +196,14 @@ Identify nodes by MRCA of a taxon set *or* by internal node id; give hard
 bounds, a density, or both.  Densities: `uniform`, `exponential`,
 `normal`, `lognormal` (parameters as `key=value;...`).
 
+The three rows above show the *syntax* only.  As numbers they are placeholders
+that no rate rescaling of a single tree can satisfy jointly, and `calibrate` now
+stops there and names the offending nodes instead of returning the broken ages;
+a density without a hard bound is likewise refused under the default
+`--method bounds`.  For a table that runs as it stands, use
+`data/examples/example_calibrations_feasible.tsv`; both rules are walked through
+in [`docs/tutorials/tutorial2-end-to-end.md`](docs/tutorials/tutorial2-end-to-end.md).
+
 ## Validation
 
 The test suite encodes the project's acceptance gates; each gate, what it
@@ -240,7 +254,9 @@ only published constants of Tao et al. (2019) are used.
 曾子超 (Zichao Zeng) · [zengzichao@sjtu.edu.cn](mailto:zengzichao@sjtu.edu.cn) ·
 [ORCID 0000-0001-6553-970X](https://orcid.org/0000-0001-6553-970X)
 
-The preferred citation is recorded in [`CITATION.cff`](CITATION.cff). v0.1.0 is
-archived on Zenodo at [10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146);
-cite [10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145) for the
-software as a whole across versions.
+The preferred citation is recorded in [`CITATION.cff`](CITATION.cff). Cite
+[10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145), the engine's
+Zenodo *concept* DOI, for the software across versions;
+[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146) is the
+archived **v0.1.0** version record, and the matching version record for 0.1.1 is
+minted when the 0.1.1 release is cut.

@@ -32,7 +32,7 @@ repeated.
 | `--calibrations` | – | – | – | ✓ | – | – | – | – | – | – | ✓⁴ |
 | `--method` | – | – | – | ✓ | – | – | – | – | – | – | – |
 | `--n-effective` | – | – | – | ✓ | – | – | – | – | – | – | – |
-| `--seed` | – | – | – | ✓ | – | ✓ | – | – | – | ✓ | – |
+| `--seed` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | ✓ | ✓ | – |
 | `--branch-var` | – | – | – | – | ✓ | – | – | – | – | – | – |
 | `--n-sites` | – | – | – | – | ✓ | – | – | – | – | – | – |
 | `--level` | – | – | – | – | ✓ | – | – | – | – | – | – |
@@ -47,8 +47,8 @@ repeated.
 | `--workdir` | – | – | – | – | – | – | – | – | – | ✓ | ✓ |
 
 ¹ `ci` does not take tree inputs on the command line: it re-reads the tree,
-outgroup, format, polytomy handling and outgroup check recorded by the
-`calibrate` run in `<prefix>_report.json` (see `calibrated`).
+outgroup, format, polytomy handling and its seed, and the outgroup check
+recorded by the `calibrate` run in `<prefix>_report.json` (see `calibrated`).
 ² overrides the value recorded by `calibrate` (see `mean` /
 `rate_ratio_threshold`); unset means "use what was recorded".
 ³ accepted but **ignored** by the rate pass — see `rate_ratio_threshold`.
@@ -66,6 +66,24 @@ alone.
 * NEXUS files may carry `[&rate=...]` annotations (R3F/FigTree dialect);
   they survive reading instead of being stripped, and are regenerated on
   write (gate G2c asserts the round trip on the R3F golden NEXUS).
+
+### Output tree formats — only `.nexus` carries the rate annotations
+* `to_newick()` (and every `*_timetree.nwk` / `*_calibrated.nwk` artefact)
+  writes **plain Newick**: branch lengths or calibrated durations, tip labels,
+  and **no `[&rate=...]` comments**.  Newick has no standard slot for them, so
+  a `.nwk` file is not a rate-annotated product and FigTree shows nothing but
+  the times.
+* `write_nexus()` (the `*.nexus` artefacts) is the annotated product and the
+  one FigTree reads rates from.  Its readability contract, pinned by
+  `tests/test_regressions_treeio_peripherals.py::test_emitted_nexus_satisfies_the_figtree_readability_contract`:
+  the `TAXA` block is annotation-free (a `TAXLABELS` list carrying `[&...]`
+  makes FigTree reject the file), the `TREES` block opens with `[&R]` for a
+  rooted tree, and every node named by `rate_map` gets `[&rate=...]` on both
+  tips and internal nodes.
+* `TimeResult.write(with_rate=True, nexus=True)` is therefore the only
+  combination that emits rates into a tree file; `with_rate` defaults to
+  `False`, and `nexus=True` without `with_rate` writes the tree block but no
+  rate comments.
 
 ### `outgroup` — rooting outgroup
 * Type: list of tip names (API), comma-separated string or one-per-line
@@ -121,6 +139,9 @@ alone.
   logged).  Zero branches make RRF rates/times on affected nodes unreliable
   (R3F warns above 10% zero-length branches; OpenRelTime logs the same
   threshold).
+* The draw comes from the stdlib `random.Random`, seeded by `seed` — every
+  subcommand with `--resolve` also accepts `--seed`, and `--resolve error`
+  still refuses a non-binary tree whatever the seed says.
 
 ## RRF estimation
 
@@ -170,11 +191,32 @@ alone.
   every absolute age.  A density-only row constrains nothing under
   `method="bounds"`, so it is rejected when the calibration table is parsed
   (`--method effective`, or add `min_bound`/`max_bound`).
+  * **One-sided bound sets take their finite edge**: if the table supplies
+    only minimum bounds, `f = max(min/t)`; if only maximum bounds,
+    `f = min(max/t)`.  The binding node therefore lands *exactly* on the bound
+    you gave.  Because that edge is a ratio of your age to the node's relative
+    time, the solution is **invariant to the unit of the bounds** — state the
+    same constraint in Ma or in Ga and every age comes back 1000x apart and
+    nothing else changes.  This replaces the `0.1.0` behaviour of flooring the
+    factor at `1.0`: that constant belongs to the unitless RRF relative scale,
+    not to your time unit, so a minimum bound asking for a *younger* tree than
+    the uncalibrated solution was left silently inert while a maximum bound
+    above it *inflated* every age in the tree.
+  * **The converged ages are re-checked against the tree.**  The violation loop
+    tests the worst violator of the round it is fixing, so it can converge with
+    a descendant still older than its ancestor or with a negative age somewhere
+    in the tree; after the loop finishes, every emitted node age is checked for
+    non-negativity and for that nesting, and a failure raises `ValueError`
+    naming the offending node ids.  Nothing is written and no warning-only
+    result is returned.  `data/examples/example_calibrations.tsv` is the
+    shipped demonstration of a set that trips it under `method="effective"`.
 * `"effective"` — msz236: for each density calibration two dates are sampled
   per replicate as (min, max); the analysis is repeated `n_effective` times;
   the 2.5/97.5 percentiles per calibrated node become *effective bounds*
   used for the final estimate.  Empirical 2.5/97.5 node-age quantiles are
-  reported alongside.
+  reported alongside.  Each replicate is solved under the same nesting check,
+  so a density that regularly implies bounds the tree cannot host raises instead
+  of returning percentile soup.
 
 ### `n_effective`
 * Default `10_000` (msz236 protocol); lower it (>= 200) for exploratory runs
@@ -182,9 +224,25 @@ alone.
   replicate costs O(#calibrations + n).
 
 ### `seed`
-* Randomness (density sampling, BLB, sister resampling) is always routed
-  through a `numpy.random.Generator`; record the seed (stored in
-  `<prefix>_report.json`) for reproducibility.
+* The sources of randomness are separate, and they do not all use the same
+  generator:
+  * polytomy binarisation (`resolve_polytomy="random"`, `openreltime.treeio`)
+    uses the stdlib `random.Random`, **not** numpy.  Every subcommand that
+    takes `--resolve` also takes `--seed`, and the seed the tree was read with
+    lands in `<prefix>_report.json` as `parameters.seed` — except `monophyly`,
+    which writes `<prefix>_monophyly.csv` and has no report block at all;
+  * effective-bound density sampling (`method="effective"`) uses
+    `numpy.random.default_rng(seed)`; recorded in the `calibrate` block;
+  * CorrTest sister-branch resampling (`sister_resample > 0`) uses
+    `numpy.random.default_rng(seed)`; recorded in the `corrtest` block;
+  * BLB resampling and each replicate's IQ-TREE `-seed` use
+    `numpy.random.default_rng(seed)`; recorded in `blb_report.json`.
+* `ci` takes no seed of its own: it re-reads the tree with the `seed` recorded
+  by the `calibrate` run it qualifies, and echoes it into its own block.
+* Record the seed with any published result.  A run without `--seed` draws its
+  randomness afresh and is not reproducible; `blb` is the exception in form
+  only — it draws a master seed when you give none and logs it so the run can
+  be replayed.
 
 ### Calibration file format (`calibrations.tsv`, TSV)
 Columns: `node_id` (optional), `taxon_set` (`|`-separated, optional;
@@ -259,6 +317,15 @@ duplicate node ids raise too.
 * Default `0.95`.  CI bounds are truncated at hard calibration bounds, and a
   symmetric interval whose lower end would fall below 0 is clipped at 0 (a
   divergence time cannot be negative; `notes` records the clip).
+* **Branch lengths must be in substitutions per site.**  msz236 eq (14)
+  distributes `RV(R)` over branches by the ratio `b_j^2 / sum(b^2)`, which is
+  scale-free, but `vS(b) = b/L` and the derivatives `dt_i/db_j` are not, so the
+  absolute interval width tracks the unit of the input branch lengths.  The
+  estimator is the published one and is not modified here; instead
+  `openreltime ci` warns once per call when the longest branch is outside
+  0.02-5 substitutions per site, which is the range a per-site tree falls in.
+  The *fractional* half-width (`width / (2 * time)`) is unit-free and is the
+  safe quantity to compare across trees.
 
 ### Rate-heterogeneity component `RV(R)` (not user-settable)
 * `RV(R) = max(Vobs(R) - SV(R)/N, 0)` on the **per-lineage** scale of msz236

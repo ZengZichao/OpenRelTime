@@ -21,6 +21,9 @@ from openreltime.treeio import parse_newick
 
 TOL = 1e-12
 
+
+pytestmark = pytest.mark.gate("G1")
+
 # --- hand-computed fixtures -------------------------------------------------
 # 4-taxon + outgroup: b1=0.4, b2=0.2, b3=0.5, b4=0.3, b5=0.25, b6=0.35
 B = dict(b1=0.4, b2=0.2, b3=0.5, b4=0.3, b5=0.25, b6=0.35)

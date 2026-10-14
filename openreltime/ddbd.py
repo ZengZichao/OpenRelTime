@@ -166,7 +166,15 @@ def ddbd(
     internal_times = np.array(
         [times_res.times[n.node_id] for n in tree.walk() if not n.is_tip()]
     )
-    rel_time = internal_times / internal_times.max()
+    rel_time = internal_times / max(float(internal_times.max()), 1e-300)
+    if float(internal_times.max()) <= 0.0:
+        logger.warning(
+            "the tree carries no positive relative node times (max = %g), so no "
+            "time scale can be formed; the fitted birth/death rates describe a "
+            "degenerate node-time vector and must not be read as a speciation "
+            "estimate",
+            float(internal_times.max()),
+        )
     rel_time[rel_time < 0] = 0.0
 
     if anchor_node is not None:

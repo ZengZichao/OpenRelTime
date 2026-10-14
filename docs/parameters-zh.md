@@ -30,7 +30,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 | `--calibrations` | – | – | – | ✓ | – | – | – | – | – | – | ✓⁴ |
 | `--method` | – | – | – | ✓ | – | – | – | – | – | – | – |
 | `--n-effective` | – | – | – | ✓ | – | – | – | – | – | – | – |
-| `--seed` | – | – | – | ✓ | – | ✓ | – | – | – | ✓ | – |
+| `--seed` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | ✓ | ✓ | – |
 | `--branch-var` | – | – | – | – | ✓ | – | – | – | – | – | – |
 | `--n-sites` | – | – | – | – | ✓ | – | – | – | – | – | – |
 | `--level` | – | – | – | – | ✓ | – | – | – | – | – | – |
@@ -45,8 +45,8 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 | `--workdir` | – | – | – | – | – | – | – | – | – | ✓ | ✓ |
 
 ¹ `ci` 不在命令行接受树输入，而是从 `calibrate` 那次运行留下的
-`<prefix>_report.json` 中读回树、外群、输入格式、多分叉处理与外群检查方式（见
-`calibrated`）。
+`<prefix>_report.json` 中读回树、外群、输入格式、多分叉处理及其种子与外群检查
+方式（见 `calibrated`）。
 ² 覆盖 `calibrate` 记录的值（见 `mean`、`rate_ratio_threshold`）；不指定即“沿用
 记录值”。
 ³ 速率计算过程会**忽略**这个选项——见 `rate_ratio_threshold`。
@@ -62,6 +62,21 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   `--fmt` 同样默认 `newick`，且只接受这两个值）。
 * NEXUS 文件可携带 `[&rate=...]` 注释（R3F 与 FigTree 的方言）；读入时保留这些
   注释，写出时重新生成。
+
+### 输出树格式——只有 `.nexus` 带速率注释
+* `to_newick()`（以及所有 `*_timetree.nwk` / `*_calibrated.nwk` 产物）写出的是
+  **纯 Newick**：枝长或定标后的时长、末端名，**不含任何 `[&rate=...]` 注释**。
+  Newick 没有存放它们的标准位置，所以 `.nwk` 不是带速率注释的产物，FigTree 打开
+  它只能看到时间。
+* `write_nexus()`（即 `*.nexus` 产物）才是带注释的产物，也是 FigTree 读取速率的
+  来源。它的可读性契约由
+  `tests/test_regressions_treeio_peripherals.py::test_emitted_nexus_satisfies_the_figtree_readability_contract`
+  钉住：`TAXA` 块不含注释（`TAXLABELS` 里带 `[&...]` 会让 FigTree 直接拒绝文
+  件），`TREES` 块以 `[&R]` 开头声明有根树，`rate_map` 点名的每一个节点——末端
+  与内部节点都一样——都带上 `[&rate=...]`。
+* 因此 `TimeResult.write(with_rate=True, nexus=True)` 是唯一把速率写进树文件的
+  组合；`with_rate` 默认为 `False`，而只给 `nexus=True` 不给 `with_rate` 时写出
+  的是树块而没有速率注释。
 
 ### `outgroup` — 置根外群
 * 类型：末端名列表（API），逗号分隔字符串或每行一个名称的文本文件
@@ -110,6 +125,9 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 * `"random"` 以零枝长把多分叉随机二叉化（记录警告）。零枝长会让受影响节点的
   RRF 速率与时间不可靠（R3F 在零枝占比超过 10% 时警告；OpenRelTime 采用同一
   阈值）。
+* 这个随机抽取由标准库的 `random.Random` 完成，用 `seed` 定种——凡是有
+  `--resolve` 的子命令都同时接受 `--seed`；无论种子给什么，`--resolve error`
+  依旧拒绝非二叉树。
 
 ## RRF 估计
 
@@ -151,18 +169,47 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   值，同样报错，而不会把 `f = inf` 传播进每一个绝对年龄。只给密度、不给硬边界
   的行在 `method="bounds"` 下不构成任何约束，解析校正表时会拒绝该行（改用
   `--method effective`，或补上 `min_bound` 与 `max_bound`）。
+  * **只给单侧边界时取它的有限边界**：表中只有下界时 `f = max(min/t)`，只有上界时
+    `f = min(max/t)`，于是被约束钉住的那个节点**恰好**落在你给的边界上。该边界是你
+    给的年龄除以节点相对时间，因此解对**边界的时间单位保持不变**——同一物理约束用 Ma
+    与用 Ga 表述，只让所有年龄恰好相差 1000 倍，其他一切不变。这取代了 `0.1.0` 把因
+    子下限夹到 `1.0` 的做法：那个常数属于无量纲的 RRF 相对尺度，而不是你的时间单位，
+    于是一个要求树比未校正解*更年轻*的下界被静默忽略，而高于未校正解的上界反而把整棵
+    树的每个年龄都抬高。
+  * **收敛后的年龄会被重新对照树的拓扑检查。** 违反修复循环每轮只检查当轮最严重的违
+    反者，因此它可能在“后代仍比祖先更老”或“树里出现负年龄”的情况下就宣布收敛；循环结束
+    后，所有输出的节点年龄会被检查非负性与嵌套关系，不通过就抛出 `ValueError` 并点名具
+    体节点 id。此时不写出任何结果，也不会只给一条警告就把解返回给你。
+    `data/examples/example_calibrations.tsv` 就是随包提供的、在
+    `method="effective"` 下触发该检查的示例。
 * `"effective"`——msz236：对每个密度校正，每次复制抽取两个日期作为
   (min, max)；分析重复 `n_effective` 次；每个被校正节点的 2.5 与 97.5 分位数成
-  为最终估计所使用的*有效边界*。同时报告各节点的经验 2.5 与 97.5 年龄分位数。
+  为最终估计所使用的*有效边界*。同时报告各节点的经验 2.5 与 97.5 年龄分位数。每
+  一次复制都在同一嵌套检查下求解，因此一个经常给出该树无法容纳的边界的密度会直接
+  报错，而不是返回一堆分位数垃圾。
 
 ### `n_effective`
 * 默认 `10_000`（msz236 协议）；大树的探索性运行可调低（≥ 200）。复制之间复用
   已缓存的组合枝长，因此每次复制的代价是 O(#校正数 + n)。
 
 ### `seed`
-* 一切随机性（密度抽样、BLB、sister 重抽样）都经由
-  `numpy.random.Generator`；请把种子（写入 `<prefix>_report.json`）一并记录，
-  以便复现。
+* 随机性有几个彼此独立的来源，用的生成器并不相同：
+  * 多分叉二叉化（`resolve_polytomy="random"`，`openreltime.treeio`）用的是
+    标准库的 `random.Random`，**不是** numpy。凡是有 `--resolve` 的子命令都
+    同时接受 `--seed`，读树所用的种子会写进 `<prefix>_report.json` 的
+    `parameters.seed`——只有 `monophyly` 例外：它只输出
+    `<prefix>_monophyly.csv`，没有报告块可记；
+  * 有效边界的密度抽样（`method="effective"`）用 `numpy.random.default_rng(seed)`，
+    记录在 `calibrate` 块；
+  * CorrTest 的 sister 分支重抽样（`sister_resample > 0`）用
+    `numpy.random.default_rng(seed)`，记录在 `corrtest` 块；
+  * BLB 的重抽样与每次 IQ-TREE 的 `-seed` 用 `numpy.random.default_rng(seed)`，
+    记录在 `blb_report.json`。
+* `ci` 没有自己的种子：它用所跟随的那次 `calibrate` 运行记录的 `seed` 重新读
+  树，并把它回写进自己的报告块。
+* 发表结果时请一并记录种子。不给 `--seed` 的运行每次都重新抽取随机性，无法复
+  现；`blb` 只在形式上例外——你不给种子时它会自己抽一个主种子并写进日志，以便
+  复跑。
 
 ### 校正文件格式（`calibrations.tsv`，TSV）
 列：`node_id`（可选）、`taxon_set`（`|` 分隔，可选；两者恰好给一个）、
@@ -222,6 +269,12 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 ### `level`
 * 默认 `0.95`。区间在硬校正边界处截断；若对称区间的下界小于 0，则截到 0（分化
   时间不可能为负；`notes` 会记录这次截断）。
+* **枝长必须以“每位点置换数”为单位。** msz236 式 (14) 用比值 `b_j^2 / sum(b^2)`
+  把 `RV(R)` 分配到各条枝上，这个比值与尺度无关，但 `vS(b) = b/L` 与导数
+  `dt_i/db_j` 并非如此，所以区间的**绝对**宽度会跟随输入枝长的单位。估计量是文献
+  给出的那一个，此处不做改动；作为替代，`openreltime ci` 会在最长枝落在
+  0.02–5 每位点置换之外时每次调用只发出一次警告。*相对*半宽（`width / (2 * time)`）
+  与单位无关，是跨树比较时可以放心使用的量。
 
 ### 速率异质性分量 `RV(R)`（不由用户设定）
 * `RV(R) = max(Vobs(R) - SV(R)/N, 0)`，取在 msz236 eq (9) 的**逐谱系**尺度上：

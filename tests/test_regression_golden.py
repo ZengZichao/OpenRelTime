@@ -39,12 +39,14 @@ def tree():
     return read_tree(TREE, outgroup=OUTGROUP)
 
 
+@pytest.mark.gate("G2a")
 def test_g2a_rate_regression(comparison: dict[str, float]) -> None:
     """G2a: slope >= 0.999 and median relative deviation <= 1e-6."""
     assert comparison["rate_slope"] >= 0.999
     assert comparison["rate_median_rel"] <= 1e-6
 
 
+@pytest.mark.gate("G2b")
 def test_g2b_time_regression(comparison: dict[str, float]) -> None:
     """G2b: slope >= 0.999 and all clade times matched."""
     assert comparison["n_common"] == 541  # 271 tips + 270 internal nodes
@@ -52,6 +54,7 @@ def test_g2b_time_regression(comparison: dict[str, float]) -> None:
     assert comparison["time_max_rel"] <= 1e-6
 
 
+@pytest.mark.gate("G5")
 def test_rooted_topology_matches_ape(tree) -> None:
     """Rooting + outgroup pruning reproduces ape::root + drop.tip exactly."""
     expected = (GOLDEN / "example_rooted_dropped.nwk").read_text().strip()
@@ -76,6 +79,8 @@ def _sorted_pairs(newick: str) -> list[tuple[str, float]]:
     return sorted(depths(tree))
 
 
+@pytest.mark.gate("G2a")
+@pytest.mark.gate("G2b")
 def test_rates_times_table_matches_golden(tree) -> None:
     """The rates-times table equals R3F's _RRF_table.csv node by node."""
     res = rrf_times(tree)
@@ -107,6 +112,7 @@ def test_rates_times_table_matches_golden(tree) -> None:
     assert max(diffs) < 1e-6
 
 
+@pytest.mark.gate("G2b")
 def test_tree2table_matches_golden(tmp_path: Path) -> None:
     """tree2table reproduces R3F's branch-length pairs, matched by clade."""
     golden = pd.read_csv(GOLDEN / "example_tree2table.csv", dtype=str)
@@ -141,6 +147,7 @@ def test_tree2table_matches_golden(tmp_path: Path) -> None:
         assert pair_golden == pair_mine, f"clade mismatch: {sorted(clade)[:2]}"
 
 
+@pytest.mark.gate("G6")
 def test_corrttest_matches_r3f_score(tree) -> None:
     """CorrTest on the golden tree reproduces the stored R3F CorrScore.
 
@@ -166,24 +173,30 @@ def test_corrttest_matches_r3f_score(tree) -> None:
     # serve as an error budget.  Compare against the unrounded double instead:
     # OpenRelTime reproduces it exactly.
     full = (GOLDEN / "example_corrtest_full_precision.txt").read_text()
-    exact = float([l for l in full.splitlines()
-                   if l.startswith("sr0")][0].split("\t")[1])
+    exact = float(
+        [ln for ln in full.splitlines() if ln.startswith("sr0")][0].split("\t")[1]
+    )
     assert res.score == exact, (res.score, exact)
 
     # the per-node rates CorrTest consumes must be the same physical quantity
-    # the engine reports, not a vector shifted by one generation
+    # the engine reports, not a vector shifted by one generation.  The check
+    # spans all 541 nodes of the benchmark, not just the 270 internal ones: the
+    # tip rates are carried in both vectors too, and on this tree they agree
+    # exactly (max absolute difference 0.0), so leaving them out would understate
+    # what the gate proves.
     from openreltime.corrtest import _rrf_rate_vectors
 
     ids, rates, _d1, _d2 = _rrf_rate_vectors(tree)
     engine_rates = rrf_rates(tree, rate_ratio_threshold=None).rates
-    internal = [n for n in tree.walk() if not n.is_tip()]
-    assert internal  # guard against a vacuous comparison
-    for node in internal:
+    all_nodes = list(tree.walk())
+    assert len(all_nodes) == 541, all_nodes
+    for node in all_nodes:
         assert engine_rates[node.node_id] == pytest.approx(
             rates[ids.index(node.node_id)], abs=1e-9
-        ), f"internal node {node.node_id} rate differs"
+        ), f"node {node.node_id} rate differs"
 
 
+@pytest.mark.gate("G6")
 def test_corrttest_lag_decay_features_are_not_degenerate(tree) -> None:
     """lag-2/lag-3 decay features must be computed from real 2-/3-step pairs.
 
@@ -201,6 +214,7 @@ def test_corrttest_lag_decay_features_are_not_degenerate(tree) -> None:
     assert not (res.rho_ad_1_decay == 0.0 and res.rho_ad_2_decay == 0.0)
 
 
+@pytest.mark.gate("G8")
 def test_ddbd_close_to_r3f(tree) -> None:
     """ddBD parameters match the R3F run within optimizer tolerance."""
     from openreltime.ddbd import ddbd
@@ -215,6 +229,7 @@ def test_ddbd_close_to_r3f(tree) -> None:
     assert res.sampling_frac == pytest.approx(gs, rel=5e-3)
 
 
+@pytest.mark.gate("G2c")
 def test_remaining_golden_files_are_reproduced(tree) -> None:
     """Every stored R3F golden file is consumed by at least one assertion.
 

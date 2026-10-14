@@ -26,9 +26,9 @@ little bootstraps，轻量自助重采样）管线。所有功能都提供 Pytho
   author    = {曾, 子超},
   title     = {OpenRelTime: relative rate framework based molecular dating in Python},
   year      = {2026},
-  version   = {v0.1.0},
+  version   = {v0.1.1},
   publisher = {Zenodo},
-  doi       = {10.5281/zenodo.23053146},
+  doi       = {10.5281/zenodo.23053145},
   url       = {https://github.com/ZengZichao/OpenRelTime}
 }
 ```
@@ -51,7 +51,7 @@ OpenRelTime 在 274-tip 哺乳动物树上与 R3F 数值一致：回归斜率 1.
 ## 安装
 
 > **分发方式。** 本版本以源码，以及挂在
-> [v0.1.0 Release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.0)
+> [v0.1.1 Release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1)
 > 上的 sdist 与 wheel 分发；目前未发布到包索引，发布后会在此处公告。
 
 从检出安装：
@@ -67,7 +67,7 @@ pip install --editable ".[dev,plot]"   # 核心（numpy、scipy、pandas、click
 或者直接从 GitHub 安装已发布的 wheel——不必克隆，`[plot]` 会带上 matplotlib：
 
 ```bash
-pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl"
+pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl"
 ```
 
 桌面图形界面是独立产品，另行安装（见下文）。
@@ -76,9 +76,13 @@ pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/relea
 `".[plot,dev]"`。
 
 环境要求：Python ≥ 3.10，支持 Linux、macOS 和 Windows。项目不含编译扩展，
-安装通常只需数秒。CI 在 Linux 与 macOS 上跨 Python 3.10～3.13 运行测试套件
-（`.github/workflows/ci.yml`）。Windows 是声明的支持目标，CI 不在该平台上运行
-（见 `docs/validation-zh.md`）。
+安装通常只需数秒。CI 在 Linux（`ubuntu-latest`）上跨 Python 3.10、3.11、3.12
+与 3.13 运行测试套件，在 macOS（`macos-latest`）上**只在 Python 3.13** 上运行
+——`.github/workflows/ci.yml` 的矩阵显式排除了 macOS 上较旧的三个解释器，以缩
+短排队时间，所以 macOS 是单解释器的抽查，而不是 3.10～3.13 的覆盖声明。
+Windows（`windows-latest`）以一个独立作业在 Python 3.13 上同时运行引擎套件与端到端
+套件；该作业自 0.1.1 加入，因此其首个证据要等下一次 Actions 运行（已测与仅声明的对照、
+以及套件覆盖不到的一条 Windows 局限，见 `docs/validation-zh.md`）。
 
 ## OpenRelTime Studio（桌面图形界面）——独立产品
 
@@ -95,13 +99,13 @@ wheel：
 
 ```bash
 pip install \
-  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl" \
-  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.0/openreltime_studio-0.1.0-py3-none-any.whl"
+  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl" \
+  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.1/openreltime_studio-0.1.1-py3-none-any.whl"
 openreltime-studio
 ```
 
 Apple Silicon 上还可以直接取 Studio 的 Release 附件
-`OpenRelTimeStudio-v0.1.0-macOS-arm64.zip`，解压即用，完全不需要 Python。
+`OpenRelTimeStudio-v0.1.1-macOS-arm64.zip`，解压即用，完全不需要 Python。
 
 主页：<https://github.com/ZengZichao/OpenRelTime-Studio> · 图形界面手册见该项目
 自己的文档。只安装本引擎时，上文的 Python API 与全部命令行子命令都不受影响
@@ -183,6 +187,13 @@ node_id	taxon_set	min_bound	max_bound	density	density_params
 硬边界、只给密度，或者两者同时给出。密度支持 `uniform`、`exponential`、
 `normal` 和 `lognormal` 四种，参数写成 `key=value;...` 形式。
 
+上面三行只演示**语法**。作为数值，它们是占位符，任何一棵树无论怎样缩放速率都
+无法同时满足；`calibrate` 现在会在这里停下来并点名有问题的节点，而不是把算坏的
+年龄返回给你。只给密度、不给硬边界的行，在默认的 `--method bounds` 下同样会被
+拒绝。想拿到开箱即用的校正表，请用
+`data/examples/example_calibrations_feasible.tsv`；这两条规则的完整讲解见
+[`docs/tutorials/tutorial2-end-to-end-zh.md`](docs/tutorials/tutorial2-end-to-end-zh.md)。
+
 ## 验证
 
 本项目的验收门槛内置于测试套件。每个门槛实际断言什么，以及哪些随包交付的模块
@@ -224,11 +235,11 @@ python -m pytest tests/
 本项目采用 GPL-3.0-or-later（见 `LICENSE`）。对 R3F、MEGA 源码与 ape 的行为
 参考与常数引用，逐项记录在 `THIRD-PARTY-NOTICES-zh.md`。数据许可见
 `data/PROVENANCE-zh.md`。CorrTest 仓库没有提供许可证，本项目未复制它的任何代码，
-只引用 Tao et al. (2019) 已发表的常数。引用方式见 `CITATION.cff`。v0.1.0 已在
-Zenodo 存档，版本 DOI 为
-[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146)；跨版本引用软件
-整体可用 concept DOI
-[10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145)。
+只引用 Tao et al. (2019) 已发表的常数。引用方式见 `CITATION.cff`。跨版本引用本软件
+整体请使用引擎的 Zenodo concept DOI
+[10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145)；
+[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146) 是已存档的
+**v0.1.0** 版本记录，0.1.1 对应的版本记录在切出 0.1.1 发布时生成。
 
 ## 作者
 

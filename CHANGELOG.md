@@ -5,6 +5,137 @@
 OpenRelTime follows Semantic Versioning.  This file records the contents of
 each release, newest first.
 
+## 0.1.1 — 2026-10-08
+
+Bug-fix and hardening release prepared during pre-submission review of the
+accompanying *Bioinformatics* Application Note.  Every item below was found by
+auditing the manuscript's claims against the code and then reproducing the
+defect.  Three of them could silently produce a wrong answer, so they are
+treated as corrections rather than refinements.
+
+### Fixed
+
+- **Unsatisfiable nested calibrations now raise.**  A bound that required a
+  descendant node to be older than its ancestor previously appended a warning
+  and returned a solution that violated the requested `min_bound`, while also
+  abandoning repair of every remaining calibration row.  It now raises
+  `ValueError` naming the node and both bounds, matching the existing
+  root-cannot-be-younger path.
+- **That guarantee now covers the converged solution, not just one round.**
+  The nested check above examined only the worst violator of the round being
+  repaired, so a solution could still finish non-monotonic and be returned with
+  warnings.  Measured on `data/examples/example_calibrations.tsv` under
+  `method='effective'` (`n_effective=10000`, `seed=20260906`):
+  `time_factor` 4432.82, root 1162.86 Ma, node 307 at **-3998.56 Ma**, four
+  parent-child inversions, four `NaN` implied rates, no error.  Every emitted
+  node age is now re-checked for non-negativity and for the tree's own
+  parent-child ordering, and a failure raises naming the offending node ids.
+  `example_calibrations_feasible.tsv` is unaffected (`f = 371.59973111298007`,
+  zero violations).
+- **One-sided calibration bound sets take their finite edge.**  The feasible
+  factor was floored at `1.0`, a constant of the unitless RRF relative scale
+  rather than of the caller's time unit, so a minimum bound that asked for a
+  younger tree than the uncalibrated solution was left silently inert (bound
+  0.1 → `f = 1.0`) while a maximum bound above it *inflated* every age in the
+  tree (bound 0.3 → `f = 1.2862`), and the same physical constraint behaved
+  differently when stated in Ma and in Ga.  The edge is now used directly, which
+  is what the documentation said all along and makes the result invariant to the
+  unit.  Two-sided sets — every shipped example and benchmark file — are
+  untouched, because they never reached that branch.
+- **The CI `notes` column no longer calls a satisfied bound unsatisfied.**
+  A node the solver had placed on its hard bound was labelled "calibration
+  constraint not satisfied by the solver" whenever it missed the comparison by
+  one ULP, writing a false statement into a user-facing CSV column, while the
+  neighbouring pinned test already used the pinning tolerance.  Both now use it.
+- **Off-scale branch lengths are announced.**  msz236 eq (14) is scale-free in
+  the `b_j^2 / sum(b^2)` ratio but not in the resulting half-widths, so the
+  absolute interval width depends on the unit of the input branch lengths
+  (measured: the same tree gives widths of 0.426197, 0.042620 and 0.0042620 as
+  its branches are scaled by 1, 1/10 and 1/100).  The estimator is the cited one
+  and is deliberately not altered; `openreltime ci` now warns once per call when
+  the longest branch falls outside 0.02-5 substitutions per site.
+- **`corrtest(anchor_node=...)` no longer emits `inf`/`NaN`.**  Its
+  `anchor_time` defaults to `0.0`, so the anchor scaling divided by zero and
+  wrote `{"mean.rate": Infinity, "sd.rate": NaN}` into the JSON report — which
+  is not valid strict JSON and is rejected by conforming parsers.  A
+  non-positive `anchor_time` with an anchor node is now rejected up front, and
+  reports are serialised with `allow_nan=False`.
+- **Unknown density parameter keys are rejected instead of ignored.**
+  `density='normal'` with `density_params='mu=5;sigma=1'` was accepted and
+  sampled from the default `N(0, 1)`, silently applying the wrong prior.  Each
+  family now has a key whitelist (`uniform`: min,max; `exponential`:
+  offset,mean; `normal`: mean,sd; `lognormal`: offset,meanlog,sdlog) and
+  unknown or missing keys raise.
+- **Degenerate CorrTest inputs no longer report significance.**  An undefined
+  Spearman correlation was mapped to `0.0` and fed to the fixed logistic model,
+  so an all-zero-branch-length tree returned `CorrScore ≈ 1` with band
+  `P < 0.001` — the strongest possible claim from zero information.  Such trees
+  are now rejected.
+- **`n_effective=1` is rejected** rather than silently running two replicates
+  while reporting one.
+- **`openreltime.<module>` name shadowing.**  The package re-exported functions
+  whose names equalled their modules, so `openreltime.calibrate.Calibration`
+  raised `AttributeError`.  Those attributes are now callable module objects:
+  both `openreltime.calibrate(...)` and `openreltime.calibrate.Calibration`
+  work.
+- **`--seed` now reaches random polytomy resolution.**  `read_tree()` accepted
+  a `seed`, but the CLI's tree-loading helper never passed one, so
+  `--resolve random` was irreproducible and unrecorded on every subcommand
+  except `blb`.  Every command that takes `--resolve` now also takes `--seed`
+  and forwards it; the seed is recorded in the report (`monophyly`, which
+  writes only a CSV and has no report block, is the documented exception), and
+  `ci` re-reads the tree with the seed recorded by the calibration it qualifies.
+- Division-by-zero guards on the normalisation maxima in `ddbd` and `corrtest`.
+
+### Added
+
+- `blb` and `megacc` now write JSON reports and record the version banner of
+  the external tool they invoked, so a run can be attributed to a specific
+  IQ-TREE or MEGA-CC build.  No release is pinned.
+- A FigTree-readability test for the emitted NEXUS (rooted-tree token,
+  annotation-free `TAXA` block, one `[&rate=...]` comment per node, numeric
+  branch lengths, independent re-parse), plus an explicit test that plain
+  `.nwk` output does **not** carry rate annotations.
+- `data/examples/example_calibrations_feasible.tsv`: a runnable, mutually
+  consistent example.  The pre-existing `example_calibrations.tsv` is a syntax
+  illustration only — its density-only row makes it raise under the default
+  `method='bounds'`, and its inconsistent bounds drive four lineages to
+  non-positive durations.
+- `tools/check_gates.py` cross-validates the gate table in
+  `docs/validation.md` against collected test ids and `@pytest.mark.gate`
+  marks; `tools/count_tests.py` reports per-suite counts.
+- `@pytest.mark.gate(...)` marks across the unit suite, registered in
+  `pyproject.toml`.
+- `figures/`: the manuscript's four figure scripts and the two `-data.json`
+  files they draw from, plus `figures/README.md`.  They are byte-identical to
+  the sources that rendered the submitted artwork — re-running each script with
+  `--outdir` reproduces all four published PNGs byte for byte — and
+  `MANIFEST.in` ships them in the source distribution, so the Data-availability
+  statement that names `figures/` is true of the deposit rather than of the
+  authors' working copy.  Rendered artwork stays out of the distribution.
+
+### Changed
+
+- `docs/validation.md`, `docs/validation-zh.md` and `README.md` claimed CI runs
+  Python 3.10–3.13 on both Ubuntu and macOS.  `ci.yml` excludes macOS for
+  3.10/3.11/3.12, so the documents now state the real matrix: Linux
+  3.10–3.13, macOS 3.13 only.
+- `ZERO_BRLEN_WARN_FRACTION` and `MIN_INGROUP_TIPS` are now actually referenced
+  by the code that uses them, instead of being duplicated as literals.
+- The `ci.py` module docstring no longer claims intervals use calibrated
+  absolute rates; they use the scale-invariant relative RRF rates, as the code
+  has always done.
+- Gate ids are machine-checkable and `tests/test_taxonomy_monophyly.py` is
+  labelled with the gate the documentation assigns it.
+- Documentation now matches the code and the tests where it did not: the G5
+  row no longer claims byte-identity for ape-equivalent rooting (the assertion
+  compares canonicalised `(tip, depth)` pairs), the G2a/G2b note is split
+  because G2b does bound the per-node maximum, the FigTree NEXUS contract cites
+  the real test id, the `seed` section names the stdlib `random.Random` used for
+  polytomy binarisation instead of promising "always
+  `numpy.random.Generator`", and `data/golden/r3f/example_RRF_rates.nwk` finally
+  has the provenance row that file's own header promises for every data file.
+
 ## 0.1.0 — 2026-09-29
 
 First release of the OpenRelTime engine: a GPL-3 Python implementation of the

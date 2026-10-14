@@ -34,6 +34,25 @@ OUTGROUP = [
 OUTGROUP_STR = ",".join(OUTGROUP)
 
 
+def _child_env() -> dict[str, str]:
+    """Environment for CLI subprocesses, with the repo root importable.
+
+    Both CLI fixtures launch with ``cwd=`` a scratch directory, so a relative
+    ``PYTHONPATH=.`` from the invoking shell never reaches the child and every
+    test dies with ``ModuleNotFoundError: openreltime``.  CI is unaffected
+    because it installs the distribution first; a bare source checkout is not.
+    Injecting the absolute root makes the suite runnable either way.
+    """
+    env = dict(os.environ)
+    root = str(E2E_ROOT.parent)
+    existing = env.get("PYTHONPATH") or ""
+    parts = [p for p in existing.split(os.pathsep) if p]
+    if root not in parts:
+        parts.insert(0, root)
+    env["PYTHONPATH"] = os.pathsep.join(parts)
+    return env
+
+
 def pytest_configure(config):
     """Ensure output directory exists once per session."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -75,6 +94,7 @@ def run_cli(tmp_out: Path):
             cwd=str(cwd or tmp_out),
             capture_output=True,
             text=True,
+            env=_child_env(),
         )
         if check and proc.returncode != 0:
             raise AssertionError(
@@ -97,6 +117,7 @@ def run_cli_raw(tmp_out: Path):
             cwd=str(cwd or tmp_out),
             capture_output=True,
             text=True,
+            env=_child_env(),
         )
 
     return _run
@@ -122,6 +143,37 @@ def read_report(tmp_out: Path):
         return data[analysis]
 
     return _read
+
+
+#: The rows of :data:`EFFECTIVE_CALIBRATION_TEXT` -- a density calibration the
+#: ``effective`` method can actually solve.
+EFFECTIVE_CALIBRATION_TEXT = (
+    "node_id\ttaxon_set\tmin_bound\tmax_bound\tdensity\tdensity_params\n"
+    "-\tHomo_sapiens|Pan_troglodytes\t5.0\t8.0\t.\t.\n"
+    "-\tLoxodonta_africana|Elephas_maximus\t.\t.\tnormal\tmean=2.7;sd=0.3\n"
+    "-\tMus_musculus|Rattus_norvegicus\t12.0\t18.0\t.\t.\n"
+    "-\tDasypus_novemcinctus|Choloepus_didactylus\t43.0\t52.0\t.\t.\n"
+)
+
+
+@pytest.fixture
+def effective_calibrations(tmp_out: Path) -> Path:
+    """A density calibration table ``method='effective'`` can solve.
+
+    ``CALIBRATIONS`` (``data/example_calibrations.tsv``) exists to illustrate
+    the file format, and its placeholder bounds are mutually inconsistent: the
+    ``Elephas``/``Loxodonta`` density implies a much older
+    ``Dasypus``/``Choloepus`` node than that row's own 70-105 bound allows, so
+    under ``method='effective'`` the solver converges on ages that are not
+    nested in the tree -- a node at -4,000 Ma and four parent-child inversions
+    -- which :func:`openreltime.calibrate.calibrate` now rejects.  These four
+    rows are the feasible counterpart: three hard bounds plus one narrow
+    ``normal`` density centred on the age the other three rows already imply,
+    so a sampled pair never empties the feasible intersection.
+    """
+    path = tmp_out / "effective_calibrations.tsv"
+    path.write_text(EFFECTIVE_CALIBRATION_TEXT)
+    return path
 
 
 @pytest.fixture

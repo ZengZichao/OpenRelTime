@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openreltime"
-version = "0.1.0"
+version = "0.1.1"
 description = "OpenRelTime: relative rate framework (RRF) molecular dating in Python"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -63,10 +63,19 @@ include = ["openreltime*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = [
+    """gate(id): validation gate this test asserts, per docs/validation.md §1 \
+(G1, G2a, G2b, G2c, G3, G4, G5, G6, G7, G8; G9 is measured, never asserted)""",
+]
 
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+# `figures/` holds the manuscript's figure scripts, released byte-for-byte as
+# the sources that produced the published render (figures/README.md), so they
+# are deliberately not reformatted to this profile; they are outside the
+# package, the import graph and the test suite.
+extend-exclude = ["figures"]
 
 [tool.mypy]
 python_version = "3.10"

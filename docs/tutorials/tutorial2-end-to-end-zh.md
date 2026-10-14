@@ -38,17 +38,34 @@ ci = confidence_interval(cal, seq_length=1000)
 ci.write("mam_ci")
 ```
 
-`calibrations.tsv` 示例（制表符分隔；`.` 表示空单元格，每行都要含齐六个字段）：
+`calibrations.tsv` 示例（制表符分隔；`.` 表示空单元格，每行都要含齐六个字段）。
+下面四行是**一套真正能算的示例**，不只是格式示意：三条硬边界，外加一行同时给出
+密度与自己的硬边界，四行选取的数值可以让同一个全局时间因子同时满足。在随包的
+274 末端基准树上（`data/examples/example.nwk`，以三个单孔类末端为外群），它们在
+`method="bounds"` 下给出 `f = 371.60`，在 `method="effective"` 下同样可解，两次
+运行都没有警告。这些边界依旧是示意的软边界，不是建议采用的化石约束。
 
 ```
 node_id	taxon_set	min_bound	max_bound	density	density_params
--	Homo_sapiens|Pan_troglodytes	6.0	8.5	.	.
--	Elephas_maximus|Loxodonta_africana	.	.	exponential	offset=60;mean=20
--	Dasypus_novemcinctus|Choloepus_didactylus	70.0	105.0	.	.
+-	Homo_sapiens|Pan_troglodytes	5.0	8.0	.	.
+-	Mus_musculus|Rattus_norvegicus	12.0	18.0	.	.
+-	Dasypus_novemcinctus|Choloepus_didactylus	43.0	52.0	.	.
+-	Elephas_maximus|Loxodonta_africana	1.5	4.5	normal	mean=2.7;sd=0.3
 ```
 
-这些行只演示文件格式，边界数值是随意填写的示意值，并非建议的化石约束；见
-`data/examples/README-zh.md`。
+决定一张这样的表能不能跑的，是两条规则；两条都是在求解时停下来，而不是悄悄绕过去：
+
+* 只给密度、**不给**硬边界的行，在 `method="bounds"` 下不构成任何约束，解析校正表
+  时就会被拒绝。所以第四行除了密度还写了 `1.5`/`4.5`：第 3a 步用这两个边界，第 3b
+  步把它们换成自己抽样出来的两个日期；
+* 若一棵树无论怎样缩放速率都无法**同时**满足各行，就抛出 `ValueError`，并点名出现
+  的负年龄与父子倒置。0.1.0 遇到同样的校正表，会把结果连着警告一起返回。本教程
+  此前那一版占位示例——只有密度的 `Elephas`/`Loxodonta` 行，配上 `70`–`105` 的
+  `Dasypus`/`Choloepus` 边界——正是这样一种不可满足的表；随包的
+  `data/examples/example_calibrations.tsv` 也仍然是，所以它被写成一个"预期会失败"
+  的格式示意，见 `data/examples/README-zh.md`。想拿到开箱即用的表，请用
+  `data/examples/example_calibrations_feasible.tsv`——同样的四条硬边界，只是没有
+  密度那一行。
 
 > 第 4 步求导的对象，是传给 `confidence_interval` 的那个结果，这里传入的是
 > **bounds** 的结果。`confidence_interval` 会复现所接收结果的估计器——平均约定、

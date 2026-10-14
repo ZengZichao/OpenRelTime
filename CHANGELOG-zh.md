@@ -4,6 +4,78 @@
 
 OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内容，最新版本在最前。
 
+## 0.1.1 — 2026-10-08
+
+投稿前审阅驱动的缺陷修复与加固版本。下列每一项都是先把稿件陈述逐条对照代码、
+再复现出问题后修正的。其中前三项原本会**静默给出错误结果**，因此按缺陷修复处理，
+而非按改进处理。
+
+### 修复
+
+- **不可满足的嵌套校正现在会报错。** 要求后代节点比其祖先更老的界值，此前只追加
+  一条警告并返回一个**违反所请求 `min_bound`** 的解，同时还放弃修复其余校正行。
+  现在抛出 `ValueError` 并点名节点与上下界，与既有的「根无法变轻」路径一致。
+- **`corrtest(anchor_node=...)` 不再产出 `inf`/`NaN`。** 其 `anchor_time` 默认
+  为 `0.0`，锚点缩放因此除以零，并把 `{"mean.rate": Infinity, "sd.rate": NaN}`
+  写进 JSON 报告——这不是合法的严格 JSON，符合规范的解析器会直接拒绝。现在给定
+  锚点节点而 `anchor_time` 非正时前置拒绝，且报告以 `allow_nan=False` 序列化。
+- **未知的密度参数键现在报错而非被忽略。** `density='normal'` 配
+  `density_params='mu=5;sigma=1'` 此前被接受并按默认的 `N(0, 1)` 抽样，静默套用
+  了错误的先验。现在每个密度族都有键白名单（`uniform`: min,max；
+  `exponential`: offset,mean；`normal`: mean,sd；`lognormal`:
+  offset,meanlog,sdlog），未知键或缺键一律报错。
+- **退化输入不再被判定为显著。** 未定义的 Spearman 相关系数此前被替换为 `0.0`
+  再送入固定系数的 logistic 模型，于是全零枝长的树会得到 `CorrScore ≈ 1` 且落在
+  `P < 0.001` 档——用零信息给出最强结论。此类树现在被拒绝。
+- **拒绝 `n_effective=1`**，不再「跑 2 次却报告 1 次」。
+- **`openreltime.<模块>` 名字遮蔽。** 包内重导出的函数与其同名模块互相遮蔽，
+  导致 `openreltime.calibrate.Calibration` 抛 `AttributeError`。现在这些属性是
+  可调用的模块对象：`openreltime.calibrate(...)` 与
+  `openreltime.calibrate.Calibration` 都可用。
+- **`--seed` 现在能抵达随机多分叉解析。** `read_tree()` 一直接受 `seed`，
+  但命令行的读树辅助函数从不传它，于是除 `blb` 外每个子命令的
+  `--resolve random` 都不可复现、也不进报告。现在凡是有 `--resolve` 的命令
+  都同时有 `--seed` 并向下传递；种子会记进报告（只写 CSV、没有报告块的
+  `monophyly` 是文档化的例外），`ci` 则用它所依据的那次标定记录下的种子重读树。
+- `ddbd` 与 `corrtest` 中归一化极大值处的除零保护。
+
+### 新增
+
+- `blb` 与 `megacc` 现在写出 JSON 报告，并记录所调用外部程序的版本横幅，
+  使运行结果可归因到具体的 IQ-TREE / MEGA-CC 构建。仍然不锁定任何版本。
+- 面向 FigTree 可读性的 NEXUS 结构测试（有根标记、`TAXA` 块无注释、每个节点
+  一条 `[&rate=...]`、枝长为有限数值、可被独立重解析），并显式测试普通 `.nwk`
+  输出**不**携带速率注释。
+- `data/examples/example_calibrations_feasible.tsv`：一份真正可运行、彼此自洽的
+  示例。原有 `example_calibrations.tsv` 只用于演示语法——它的纯密度行使其在默认
+  `method='bounds'` 下直接抛错，而其互相矛盾的界值会把 4 条谱系压到非正时长。
+- `tools/check_gates.py`：把 `docs/validation.md` 的门禁表与实测收集到的测试 id
+  及 `@pytest.mark.gate` 标记互相校验；`tools/count_tests.py` 报告各套件计数。
+- 单元测试套件范围内的 `@pytest.mark.gate(...)` 标记，并已在 `pyproject.toml` 注册。
+- `figures/`：手稿四张图的绘图脚本、S2/S3 所读取的两份 `-data.json`，以及
+  `figures/README.md`。这些文件与产出已投稿图面的源文件逐字节一致——为每个脚本
+  加上 `--outdir` 重跑，四张已发布 PNG 均可逐字节复现。`MANIFEST.in` 随源码分发
+  一并打包它们，使 Data availability 中点名 `figures/` 的表述对存档本身成立，
+  而不仅对作者的工作副本成立。渲染产物不进入分发包。
+
+### 变更
+
+- `docs/validation.md`、`docs/validation-zh.md` 与 `README.md` 原称 CI 在 Ubuntu
+  与 macOS 上都跑 Python 3.10–3.13。`ci.yml` 实际排除了 macOS 的
+  3.10/3.11/3.12，文档已改为真实矩阵：Linux 3.10–3.13，macOS 仅 3.13。
+- `ZERO_BRLEN_WARN_FRACTION` 与 `MIN_INGROUP_TIPS` 现在真正被使用它们的代码引用，
+  不再是与字面量并存的第二份真相。
+- `ci.py` 模块文档串不再声称区间使用「标定后的绝对速率」；实现一直使用的是尺度
+  不变的相对 RRF 速率。
+- 门禁 id 现在可机器校验，且 `tests/test_taxonomy_monophyly.py` 的标注与文档
+  分配给它的门禁一致。
+- 文档已与代码和测试对齐：G5 一行不再声称与 `ape` 置根「字节一致」（断言比的是
+  规范化后的 `(末端, 深度)` 二元组）；G2a/G2b 的说明拆成两条，因为 G2b 确实约束了
+  逐节点最大值；FigTree 可读性契约改引用真实存在的测试 id；`seed` 一节点名多分叉
+  解析用的是标准库 `random.Random`，不再承诺「一律经 `numpy.random.Generator`」；
+  `data/golden/r3f/example_RRF_rates.nwk` 也补上了 `PROVENANCE.md` 开头对每个文件
+  都作出承诺的那一行。
+
 ## 0.1.0 — 2026-09-29
 
 OpenRelTime 引擎的首个版本：按 Tamura、Tao 与 Kumar（2018, *MBE* 35:1770-1782）

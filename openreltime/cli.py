@@ -64,6 +64,7 @@ def _tree_input(
     resolve: str,
     taxon_table: str | None = None,
     outgroup_check: str = "error",
+    seed: int | None = None,
 ):
     from .treeio import read_tree
 
@@ -72,6 +73,7 @@ def _tree_input(
         fmt=fmt,
         outgroup=_read_outgroup(outgroup),
         resolve_polytomy=resolve,
+        seed=seed,
         taxon_table=_read_taxon_table(taxon_table),
         outgroup_check=outgroup_check,
     )
@@ -149,6 +151,7 @@ def cli(verbose: bool) -> None:
 @click.option("--outgroup", default=None, help="Comma-separated tips/group names or a one-per-line file.")
 @click.option("--fmt", "fmt", default="newick", type=click.Choice(["newick", "nexus"]))
 @click.option("--resolve", "resolve", default="error", type=click.Choice(["error", "random"]))
+@click.option("--seed", default=None, type=int)
 @click.option("--mean", default="geometric", type=click.Choice(["geometric", "arithmetic"]))
 @click.option("--rate-ratio-threshold", "rrt", default=None, type=float,
               help="No effect here: the guard rewrites node times only, so the "
@@ -156,13 +159,21 @@ def cli(verbose: bool) -> None:
               "'times' or 'rates-times' instead.")
 @click.option("-o", "--output", "prefix", default="ORT", show_default=True)
 @_outgroup_options
-def rates(tree, outgroup, fmt, resolve, mean, rrt, prefix, taxon_table, outgroup_check):
+def rates(tree, outgroup, fmt, resolve, seed, mean, rrt, prefix, taxon_table, outgroup_check):
     """Estimate relative lineage rates (rrf_rates)."""
     _setup_logging()
     from .rates import rrf_rates
 
-    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check)
-    result = rrf_rates(t, mean=mean, rate_ratio_threshold=rrt)
+    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check, seed)
+    # the tree-reading settings are recorded because the resolved topology,
+    # not the estimator, is what the seed decided here
+    result = rrf_rates(
+        t,
+        mean=mean,
+        rate_ratio_threshold=rrt,
+        resolve_polytomy=resolve,
+        seed=seed,
+    )
     for p in result.write(prefix):
         click.echo(str(p))
 
@@ -172,22 +183,25 @@ def rates(tree, outgroup, fmt, resolve, mean, rrt, prefix, taxon_table, outgroup
 @click.option("--outgroup", default=None)
 @click.option("--fmt", "fmt", default="newick", type=click.Choice(["newick", "nexus"]))
 @click.option("--resolve", "resolve", default="error", type=click.Choice(["error", "random"]))
+@click.option("--seed", default=None, type=int)
 @click.option("--normalize", is_flag=True, help="Scale the root time to 1.0.")
 @click.option("--r3f-compat", is_flag=True, help="Write R3F file/column names.")
 @click.option("-o", "--output", "prefix", default="ORT", show_default=True)
 @_outgroup_options
 @_rrf_estimate_options
-def times(tree, outgroup, fmt, resolve, mean, normalize, no_guard, rrt, r3f_compat, prefix, taxon_table, outgroup_check):
+def times(tree, outgroup, fmt, resolve, seed, mean, normalize, no_guard, rrt, r3f_compat, prefix, taxon_table, outgroup_check):
     """Estimate relative node times (rrf_times)."""
     _setup_logging()
     from .times import rrf_times
 
-    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check)
+    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check, seed)
     result = rrf_times(
         t,
         mean=mean,
         rate_ratio_threshold=_guard_threshold(no_guard, rrt),
         normalize=normalize,
+        resolve_polytomy=resolve,
+        seed=seed,
     )
     for p in result.write(prefix, with_rate=False, r3f_compat=r3f_compat):
         click.echo(str(p))
@@ -198,6 +212,7 @@ def times(tree, outgroup, fmt, resolve, mean, normalize, no_guard, rrt, r3f_comp
 @click.option("--outgroup", default=None)
 @click.option("--fmt", "fmt", default="newick", type=click.Choice(["newick", "nexus"]))
 @click.option("--resolve", "resolve", default="error", type=click.Choice(["error", "random"]))
+@click.option("--seed", default=None, type=int)
 @click.option("--mean", default="geometric", type=click.Choice(["geometric", "arithmetic"]),
               help="Averaging convention (default: R3F-compatible geometric).")
 @click.option("--normalize", is_flag=True)
@@ -205,13 +220,15 @@ def times(tree, outgroup, fmt, resolve, mean, normalize, no_guard, rrt, r3f_comp
 @click.option("--r3f-compat", is_flag=True)
 @click.option("-o", "--output", "prefix", default="ORT", show_default=True)
 @_outgroup_options
-def rates_times(tree, outgroup, fmt, resolve, mean, normalize, plot, r3f_compat, prefix, taxon_table, outgroup_check):
+def rates_times(tree, outgroup, fmt, resolve, seed, mean, normalize, plot, r3f_compat, prefix, taxon_table, outgroup_check):
     """Estimate relative rates and node times (rrf_rates_times)."""
     _setup_logging()
     from .times import rrf_rates_times
 
-    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check)
-    result = rrf_rates_times(t, mean=mean, normalize=normalize)
+    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check, seed)
+    result = rrf_rates_times(
+        t, mean=mean, normalize=normalize, resolve_polytomy=resolve, seed=seed
+    )
     paths = result.write(prefix, with_rate=True, nexus=True, r3f_compat=r3f_compat)
     if plot:
         from .viz import plot_timetree
@@ -240,7 +257,7 @@ def calibrate_cmd(tree, calibrations, outgroup, fmt, resolve, method, n_effectiv
     from .times import rrf_times
 
     table = _read_taxon_table(taxon_table)
-    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check)
+    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check, seed)
     # the estimator settings are passed to rrf_times, so the mean/threshold
     # that calibrate records from times.params are the ones actually used
     times = rrf_times(
@@ -320,10 +337,10 @@ def ci(calibrated, branch_var, n_sites, level, prefix, mean, no_guard, rrt):
     """Analytical confidence intervals for a calibrated result.
 
     The tree is re-read and re-timed with the settings recorded in
-    ``<calibrated>_report.json`` (outgroup, format, polytomy handling, mean,
-    rate-ratio guard), so the intervals belong to the estimate that is being
-    qualified.  ``--mean``/``--rate-ratio-threshold``/``--no-guard`` override
-    the recorded values when given explicitly.
+    ``<calibrated>_report.json`` (outgroup, format, polytomy handling and its
+    seed, mean, rate-ratio guard), so the intervals belong to the estimate
+    that is being qualified.  ``--mean``, ``--rate-ratio-threshold`` and
+    ``--no-guard`` override the recorded values when given explicitly.
     """
     _setup_logging()
     import pandas as pd
@@ -347,6 +364,7 @@ def ci(calibrated, branch_var, n_sites, level, prefix, mean, no_guard, rrt):
     taxon_table_file = params.get("taxon_table_file")
     fmt = params.get("input_fmt", "newick")
     resolve = params.get("resolve_polytomy", "error")
+    seed = params.get("seed")
     # 'warn' must not degrade into 'error' at the CI stage
     outgroup_check = params.get("outgroup_check", "error")
     if tree_path is None or not Path(tree_path).exists():
@@ -366,6 +384,7 @@ def ci(calibrated, branch_var, n_sites, level, prefix, mean, no_guard, rrt):
         fmt=fmt,
         outgroup=outgroup,
         resolve_polytomy=resolve,
+        seed=seed,
         taxon_table=table,
         outgroup_check=outgroup_check,
     )
@@ -404,6 +423,8 @@ def ci(calibrated, branch_var, n_sites, level, prefix, mean, no_guard, rrt):
         branch_var=branch_var_map,
         n_sites=n_sites,
         level=level,
+        resolve_polytomy=resolve,
+        seed=seed,
     )
     for p in result.write(prefix):
         click.echo(str(p))
@@ -425,13 +446,14 @@ def corrtest(tree, outgroup, fmt, resolve, sister_resample, seed, anchor_node, a
     _setup_logging()
     from .corrtest import corrtest as run_corrtest
 
-    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check)
+    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check, seed)
     result = run_corrtest(
         t,
         sister_resample=sister_resample,
         seed=seed,
         anchor_node=anchor_node,
         anchor_time=anchor_time,
+        resolve_polytomy=resolve,
     )
     for p in result.write(prefix):
         click.echo(str(p))
@@ -442,6 +464,7 @@ def corrtest(tree, outgroup, fmt, resolve, sister_resample, seed, anchor_node, a
 @click.option("--outgroup", default=None)
 @click.option("--fmt", "fmt", default="newick", type=click.Choice(["newick", "nexus"]))
 @click.option("--resolve", "resolve", default="error", type=click.Choice(["error", "random"]))
+@click.option("--seed", default=None, type=int)
 @click.option("--sampling-frac", "sampling_frac", default=None, type=float)
 @click.option("--anchor-node", "anchor_node", default=None, type=int)
 @click.option("--anchor-time", "anchor_time", default=1.0, type=float)
@@ -449,19 +472,21 @@ def corrtest(tree, outgroup, fmt, resolve, sister_resample, seed, anchor_node, a
 @click.option("--plot", "plot", default=None, type=click.Path())
 @click.option("-o", "--output", "prefix", default="ORT", show_default=True)
 @_outgroup_options
-def ddbd(tree, outgroup, fmt, resolve, sampling_frac, anchor_node, anchor_time, measure, plot, prefix, taxon_table, outgroup_check):
+def ddbd(tree, outgroup, fmt, resolve, seed, sampling_frac, anchor_node, anchor_time, measure, plot, prefix, taxon_table, outgroup_check):
     """ddBD: birth-death speciation tree prior from RRF times."""
     _setup_logging()
     from .ddbd import ddbd as run_ddbd
     from .times import rrf_times
 
-    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check)
+    t = _tree_input(tree, outgroup, fmt, resolve, taxon_table, outgroup_check, seed)
     result = run_ddbd(
         t,
         sampling_frac=sampling_frac,
         anchor_node=anchor_node,
         anchor_time=anchor_time,
         measure=measure,
+        resolve_polytomy=resolve,
+        seed=seed,
     )
     paths = result.write(prefix)
     if plot:
@@ -499,8 +524,9 @@ def tree2table_cmd(tree, fmt, with_time, prefix):
 @click.option("--group-sep", "group_sep", default=None,
               help="Regex separator for auto-detecting groups from tip labels (default: first of '_', '|', '@' or whitespace).")
 @click.option("--resolve", "resolve", default="error", type=click.Choice(["error", "random"]))
+@click.option("--seed", default=None, type=int)
 @click.option("-o", "--output", "prefix", default="ORT", show_default=True)
-def monophyly(tree, fmt, taxon_table, groups, tips, group_sep, resolve, prefix):
+def monophyly(tree, fmt, taxon_table, groups, tips, group_sep, resolve, seed, prefix):
     """Test whether taxon groups are monophyletic (complete clades).
 
     Groups come from --taxon-table or are auto-detected from the tip labels
@@ -518,7 +544,7 @@ def monophyly(tree, fmt, taxon_table, groups, tips, group_sep, resolve, prefix):
     from .treeio import read_tree
 
     _setup_logging()
-    t = read_tree(tree, fmt=fmt, resolve_polytomy=resolve)
+    t = read_tree(tree, fmt=fmt, resolve_polytomy=resolve, seed=seed)
     if taxon_table:
         registry = parse_taxon_table(taxon_table)
         source = f"taxon table {taxon_table}"
@@ -599,14 +625,19 @@ def blb(alignment, iqtree, outgroup, gamma, n_subsample, n_replicate, iqtree_arg
         workdir=str(wd),
     )
     table.to_csv(out / "blb_summary.csv", index=False)
-    # run_blb writes the per-replicate table into the workdir; copy it to the
+    # run_blb writes the per-replicate table and the JSON report (parameters,
+    # seed, IQ-TREE banner, warnings) into the workdir; copy them to the
     # user-facing output directory alongside the summary when the two differ.
-    rep_src = wd / "blb_replicates.csv"
-    rep_dst = out / "blb_replicates.csv"
-    if rep_src.exists() and rep_src.resolve() != rep_dst.resolve():
-        import shutil
-        shutil.copy2(rep_src, rep_dst)
+    for name in ("blb_replicates.csv", "blb_report.json"):
+        src = wd / name
+        dst = out / name
+        if src.exists() and src.resolve() != dst.resolve():
+            import shutil
+
+            shutil.copy2(src, dst)
     click.echo(str(out / "blb_summary.csv"))
+    if (out / "blb_report.json").exists():
+        click.echo(str(out / "blb_report.json"))
 
 
 @cli.command()
@@ -630,11 +661,13 @@ def megacc(tree, calibrations, megacc, outgroup, mao, workdir, prefix):
         outgroup=og,
         mao=mao,
         workdir=workdir,
+        report_prefix=prefix,
     )
     frame = parse_megacc_output(outputs, outgroup=og)
     out = Path(f"{prefix}_megacc_times.csv")
     frame.to_csv(out, index=False)
     click.echo(str(out))
+    click.echo(str(Path(f"{prefix}_report.json")))
 
 
 def main() -> None:  # pragma: no cover

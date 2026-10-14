@@ -12,6 +12,11 @@
 # code the 3.10-3.12 differences are platform-independent, so Ubuntu covers
 # them.
 #
+# Windows is tested on the latest Python only, as a separate job rather than a
+# matrix entry: `pyproject.toml` and the README claim Windows support, and the
+# only way to see path-separator and line-ending regressions is to run the
+# suite on a Windows runner.
+#
 # `mypy` runs advisory (continue-on-error): the codebase still has a baseline
 # of type findings (Optional handling etc.) that need domain decisions before
 # the gate can be made hard.  It must run with `--python-version 3.12`
@@ -115,6 +120,50 @@ jobs:
         # imported must fail the job, not be tolerated.
         run: python -m pytest e2e_tests/cases -ra
 
+  test-windows:
+    name: pytest (windows-latest, Python 3.13)
+    # Windows is a declared target in `pyproject.toml` and in the README, and a
+    # *Bioinformatics* application note is expected to run on the machines
+    # readers actually have.  The engine is pure Python with no build step and
+    # no compiled dependency of its own, so one Windows job is enough to catch
+    # the platform-specific breakage the Linux/macOS matrix cannot see: path
+    # separators in written file names, text-mode line endings in the emitted
+    # CSV/Newick/NEXUS, and the subprocess bridges.
+    #
+    # The matrix above is left alone on purpose: adding Windows to it would
+    # double the macOS-length queue for no extra coverage beyond what this
+    # single job already provides.  Only the suite that needs no external
+    # tooling runs here; `blb` (IQ-TREE) and `megacc` (MEGA-CC) skip as they do
+    # on the other runners.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install package with its test extras
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --editable ".[dev,plot]"
+
+      - name: Show collected tests
+        run: python -m pytest --collect-only -q
+
+      - name: Run test suite
+        run: python -m pytest -ra
+
+      - name: Run end-to-end suite
+        # The e2e cases launch the CLI as a subprocess and byte-compare the
+        # artefacts both entry points write, which is the Windows-specific
+        # surface this job exists for.
+        run: python -m pytest e2e_tests/cases -ra
+
   minimum-versions:
     name: pytest (minimum supported dependency versions)
     # Keeps the `>=` floors in pyproject.toml honest: installs exactly the
@@ -155,7 +204,7 @@ jobs:
     # Aggregate gate for branch protection: only this check needs to be
     # required, and the whole matrix stays enforced even when jobs are
     # added, renamed or removed.
-    needs: [lint, test, minimum-versions]
+    needs: [lint, test, test-windows, minimum-versions]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

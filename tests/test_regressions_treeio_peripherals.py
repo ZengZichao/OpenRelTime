@@ -23,13 +23,19 @@ Each test pins one behaviour that must hold:
   outgroup check recorded by the run they follow, rather than re-running with
   defaults;
 * ``--branch-var`` help matches the header the parser actually requires;
+* ``--seed`` reaches ``read_tree`` on every subcommand that can binarise a
+  polytomy, so a seeded ``--resolve random`` run reproduces its topology and
+  names its seed in the report, while ``--resolve error`` still refuses it;
 * the rate colour ramp in ``viz`` is the logarithmic one.
 """
 
 from __future__ import annotations
 
 import importlib
+
 import json
+import math
+import re
 from pathlib import Path
 
 import numpy as np
@@ -47,6 +53,7 @@ from openreltime.treeio import (
     parse_newick,
     read_tree,
     root_outgroup,
+    to_newick,
     write_nexus,
 )
 
@@ -77,6 +84,7 @@ def _simple_tree():
 #  -- ghost tips after outgroup removal
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G5")
 def test_labelled_outgroup_mrca_does_not_become_a_ghost_tip(tmp_path: Path) -> None:
     path = tmp_path / "ghost.nwk"
     path.write_text(GHOST)
@@ -93,6 +101,7 @@ def test_labelled_outgroup_mrca_does_not_become_a_ghost_tip(tmp_path: Path) -> N
     assert whole.tip_labels() == ["B", "C", "D", "E"]
 
 
+@pytest.mark.gate("G4")
 def test_validation_rejects_an_internals_degenerated_into_a_tip() -> None:
     """The guard behind : no internal node may survive as a tip."""
     tree = parse_newick(GHOST)
@@ -182,6 +191,7 @@ def _plotted_ddbd_curve(ddbd_result, times_result, monkeypatch, target: Path):
     )
 
 
+@pytest.mark.gate("G8")
 def test_ddbd_fitted_curve_integrates_to_one_on_the_plotted_axis(
     tmp_path, monkeypatch
 ) -> None:
@@ -219,6 +229,7 @@ def test_rate_colour_ramp_is_logarithmic_by_default() -> None:
 #  -- [&rate=...] survives a read
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G2c")
 def test_nexus_rate_annotations_survive_a_read(tmp_path: Path) -> None:
     tree = _simple_tree()
     rates = {n.node_id: round(0.25 * n.node_id, 4) for n in tree.walk()}
@@ -238,6 +249,7 @@ def test_nexus_rate_annotations_survive_a_read(tmp_path: Path) -> None:
     assert again.count("[&rate=") == len(rates)
 
 
+@pytest.mark.gate("G2c")
 def test_r3f_annotated_golden_nexus_keeps_its_rates() -> None:
     """Read direction of gate G2c: ape/R3F ``[&rate=]`` annotations are kept.
 
@@ -255,6 +267,7 @@ def test_r3f_annotated_golden_nexus_keeps_its_rates() -> None:
     ) == 0.0
 
 
+@pytest.mark.gate("G4")
 def test_comments_do_not_cut_through_labels(tmp_path: Path) -> None:
     # a bracket inside a quoted label must survive comment stripping
     tree = parse_newick("((A:0.1,'B[X], sp.':0.2)N:0.3,(C:0.1,D:0.2)M:0.15):0.0;")
@@ -279,6 +292,7 @@ def test_comments_do_not_cut_through_labels(tmp_path: Path) -> None:
 # issues 22 and 23 -- ddBD fit semantics vs R3F
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G8")
 def test_ddbd_sampling_frac_leaves_rho_free_like_r3f(monkeypatch) -> None:
     """R3F keeps rho free and only rewrites the *reported* sampling fraction."""
     ddbd_module = importlib.import_module("openreltime.ddbd")
@@ -312,6 +326,7 @@ def test_ddbd_sampling_frac_leaves_rho_free_like_r3f(monkeypatch) -> None:
     )
 
 
+@pytest.mark.gate("G8")
 def test_ddbd_grid_follows_expand_grid_order(monkeypatch) -> None:
     """Birth rate varies fastest, and tied scores keep the first grid row."""
     ddbd_module = importlib.import_module("openreltime.ddbd")
@@ -338,6 +353,7 @@ def test_ddbd_grid_follows_expand_grid_order(monkeypatch) -> None:
     assert starts[10] == pytest.approx([2.1, 2.0, 0.001])
 
 
+@pytest.mark.gate("G8")
 def test_ddbd_accepts_abnormal_l_bfgs_b_termination(monkeypatch) -> None:
     """ABNORMAL_TERMINATION_IN_LNSRCH coefficients are usable; R3F keeps them."""
     ddbd_module = importlib.import_module("openreltime.ddbd")
@@ -375,18 +391,38 @@ BLB_TREES = [
     "(((A:0.11,B:0.13)X:0.21,(C:0.14,(D:0.19,E:0.21)Y:0.24)Z:0.29)W:0.05,F:0.31)R;",
 ]
 
+#: Stand-in for the IQ-TREE banner ``blb`` records in its JSON report.
+BLB_VERSION_BANNER = "iqtree 2.3.1 macOS-13.6.1-arm64 " \
+    "(3919f8ae5c 2024-05-05T07:39:31-04:00) [5.0.0]"
+
 
 @pytest.fixture()
 def blb_env(tmp_path, monkeypatch):
-    """Stub out IQ-TREE: record argv, write a replicate treefile."""
+    """Stub out IQ-TREE: record argv, write a replicate treefile.
+
+    ``blb`` probes ``--version`` before it runs any replicate so the invoked
+    release lands in the JSON report; that probe is recorded separately in
+    ``version_calls`` so the argv/``-seed`` assertions below keep describing the
+    *replicate* command lines, exactly as they did before the probe existed.
+    """
     bootstrap = importlib.import_module("openreltime.bootstrap")
     alignment = tmp_path / "aln.fasta"
     alignment.write_text(
         "".join(f">{name}\n{'ACGT' * 15}\n" for name in "ABCDEF")
     )
     calls: list[list[str]] = []
+    version_calls: list[list[str]] = []
 
     def fake_run_tool(argv, check=True):
+        if "--version" in argv:
+            version_calls.append(list(argv))
+
+            class VersionDone:
+                stdout = BLB_VERSION_BANNER.encode()
+                stderr = b""
+                returncode = 0
+
+            return VersionDone()
         calls.append(list(argv))
         pre = argv[argv.index("-pre") + 1]
         Path(f"{pre}.treefile").write_text(
@@ -401,6 +437,7 @@ def blb_env(tmp_path, monkeypatch):
         return Done()
 
     monkeypatch.setattr(bootstrap, "run_tool", fake_run_tool)
+    blb_env.version_calls = version_calls
     return bootstrap, alignment, calls, tmp_path
 
 
@@ -486,6 +523,7 @@ def cli_inputs(tmp_path: Path) -> tuple[Path, Path, list[str]]:
     return tree_file, cal_file, []
 
 
+@pytest.mark.gate("G3")
 def test_cli_calibrate_records_and_ci_restores_estimator_settings(
     cli_inputs, monkeypatch
 ) -> None:
@@ -539,6 +577,7 @@ def test_cli_calibrate_records_and_ci_restores_estimator_settings(
     assert seen["mean"] == "arithmetic"
 
 
+@pytest.mark.gate("G3")
 def test_cli_errors_are_clean_not_tracebacks(cli_inputs) -> None:
     tree_file, cal_file, _ = cli_inputs
     runner = CliRunner()
@@ -567,6 +606,7 @@ def test_cli_errors_are_clean_not_tracebacks(cli_inputs) -> None:
     assert both.exit_code == 1 and "mutually exclusive" in both.output
 
 
+@pytest.mark.gate("G3")
 def test_branch_var_help_matches_the_header_the_parser_requires(cli_inputs) -> None:
     tree_file, cal_file, _ = cli_inputs
     option = next(
@@ -601,6 +641,7 @@ def test_branch_var_help_matches_the_header_the_parser_requires(cli_inputs) -> N
     assert "'node_id' and 'var'" in bad.output
 
 
+@pytest.mark.gate("G3")
 def test_rates_help_and_report_admit_the_guard_is_ignored(
     cli_inputs,
 ) -> None:
@@ -630,3 +671,267 @@ def test_rates_help_and_report_admit_the_guard_is_ignored(
     left = pd.read_csv(f"{bare}_rates.csv")
     right = pd.read_csv(f"{guarded}_rates.csv")
     pd.testing.assert_frame_equal(left, right)
+
+
+# ---------------------------------------------------------------------------
+#  -- --seed reaches the polytomy resolver
+# ---------------------------------------------------------------------------
+
+#: The trichotomy gate G4 already refuses
+#: (``test_calibration_ci_edges.py::test_polytomy_rejected_and_random_resolution``),
+#: reused here so the CLI is tested against the same polytomy.
+POLYTY = "((A:1,B:2,C:3):4,(D:5,E:6):7);"
+
+#: A seven-way polytomy: it has ~5.7e4 binary resolutions, so a run that ignored
+#: its seed could not land on the same topology as the seeded run by chance.
+POLYTY_FAN = (
+    "((A:1.0,B:2.0,C:3.0,D:4.0,E:5.0,F:6.0,G:7.0):8.0,(H:1.0,I:2.0):9.0);"
+)
+
+#: Every subcommand that can binarise a polytomy; ``tree2table`` reads trees but
+#: has no ``--resolve``, and ``ci`` inherits both settings from the report.
+RESOLVING_SUBCOMMANDS = [
+    "rates",
+    "times",
+    "rates-times",
+    "calibrate",
+    "corrtest",
+    "ddbd",
+    "monophyly",
+]
+
+#: Subcommand -> the report block that must name the seed it read the tree
+#: with.  ``monophyly`` is absent: it writes only ``<prefix>_monophyly.csv``.
+REPORTED_SEED_CASES = [
+    ("rates", "rrf_rates"),
+    ("times", "rrf_times"),
+    ("rates-times", "rrf_times"),
+    ("calibrate", "calibrate"),
+    ("corrtest", "corrtest"),
+    ("ddbd", "ddbd"),
+]
+
+#: Subcommand -> the artefact whose bytes encode the resolved topology.
+REPLAYED_TOPOLOGY_CASES = [
+    ("rates", "rates.nwk"),
+    ("times", "timetree.nwk"),
+    ("rates-times", "timetree.nexus"),
+]
+
+#: Seed a trichotomy has to honour: with it the resolution is fixed, without it
+#: the same command draws a different pairing on every run.
+SEEDED = ["--resolve", "random", "--seed", "7"]
+
+
+@pytest.fixture()
+def poly_file(tmp_path: Path) -> Path:
+    path = tmp_path / "poly.nwk"
+    path.write_text(POLYTY)
+    return path
+
+
+@pytest.fixture()
+def fan_file(tmp_path: Path) -> Path:
+    path = tmp_path / "fan.nwk"
+    path.write_text(POLYTY_FAN)
+    return path
+
+
+@pytest.fixture()
+def read_tree_calls(monkeypatch) -> list[dict]:
+    """Record the keyword arguments of every ``read_tree`` call the CLI makes."""
+    treeio = importlib.import_module("openreltime.treeio")
+    calls: list[dict] = []
+    real = treeio.read_tree
+
+    def spy(*args, **kwargs):
+        calls.append(kwargs)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(treeio, "read_tree", spy)
+    return calls
+
+
+def _argv(sub: str, poly: Path, prefix: Path, extra: list[str]) -> list[str]:
+    argv = [sub, "-i", str(poly), *extra, "-o", str(prefix)]
+    if sub == "calibrate":
+        cal = poly.parent / "calibrations.tsv"
+        cal.write_text(CALIBRATIONS)
+        argv[3:3] = ["-c", str(cal)]
+    return argv
+
+
+def _artefacts(sub: str, poly: Path, prefix: Path, seed: int) -> dict[str, bytes]:
+    res = CliRunner().invoke(
+        cli, _argv(sub, poly, prefix, ["--resolve", "random", "--seed", str(seed)])
+    )
+    assert res.exit_code == 0, res.output
+    return {
+        p.name.removeprefix(f"{prefix.name}_"): p.read_bytes()
+        for p in poly.parent.glob(f"{prefix.name}_*")
+    }
+
+
+@pytest.mark.gate("G3")
+@pytest.mark.parametrize("sub", RESOLVING_SUBCOMMANDS)
+def test_cli_seed_reaches_read_tree(poly_file, read_tree_calls, sub) -> None:
+    prefix = poly_file.parent / f"seeded_{sub}"
+    res = CliRunner().invoke(cli, _argv(sub, poly_file, prefix, SEEDED))
+    assert res.exit_code == 0, res.output
+    assert len(read_tree_calls) == 1, read_tree_calls
+    assert read_tree_calls[0]["resolve_polytomy"] == "random"
+    assert read_tree_calls[0]["seed"] == 7
+
+
+@pytest.mark.gate("G3")
+@pytest.mark.parametrize("sub,analysis", REPORTED_SEED_CASES)
+def test_cli_records_the_tree_seed_in_the_report(poly_file, sub, analysis) -> None:
+    prefix = poly_file.parent / f"reported_{sub}"
+    res = CliRunner().invoke(cli, _argv(sub, poly_file, prefix, SEEDED))
+    assert res.exit_code == 0, res.output
+    report = json.loads(Path(f"{prefix}_report.json").read_text())
+    assert report[analysis]["parameters"]["seed"] == 7
+    assert report[analysis]["parameters"]["resolve_polytomy"] == "random"
+
+
+@pytest.mark.gate("G3")
+@pytest.mark.parametrize("sub,topology_artefact", REPLAYED_TOPOLOGY_CASES)
+def test_cli_random_resolution_is_seed_reproducible(
+    fan_file, sub, topology_artefact
+) -> None:
+    """Same seed -> byte-identical artefacts; another seed -> another topology."""
+    first = _artefacts(sub, fan_file, fan_file.parent / "seed7a", 7)
+    second = _artefacts(sub, fan_file, fan_file.parent / "seed7b", 7)
+    assert first == second
+    other = _artefacts(sub, fan_file, fan_file.parent / "seed5", 5)
+    assert other[topology_artefact] != first[topology_artefact]
+
+
+@pytest.mark.gate("G3")
+def test_cli_ci_restores_the_recorded_polytomy_seed(poly_file, read_tree_calls) -> None:
+    """``ci`` re-reads with calibrate's seed, so it qualifies the same topology."""
+    prefix = poly_file.parent / "cal"
+    res = CliRunner().invoke(cli, _argv("calibrate", poly_file, prefix, SEEDED))
+    assert res.exit_code == 0, res.output
+    read_tree_calls.clear()
+    ci_prefix = poly_file.parent / "ci"
+    ci = CliRunner().invoke(cli, ["ci", "-c", str(prefix), "-o", str(ci_prefix)])
+    assert ci.exit_code == 0, ci.output
+    assert len(read_tree_calls) == 1, read_tree_calls
+    assert read_tree_calls[0]["resolve_polytomy"] == "random"
+    assert read_tree_calls[0]["seed"] == 7
+    report = json.loads(Path(f"{ci_prefix}_report.json").read_text())
+    assert report["confidence_interval"]["parameters"]["seed"] == 7
+    assert report["confidence_interval"]["parameters"]["resolve_polytomy"] == "random"
+
+
+@pytest.mark.gate("G4")
+@pytest.mark.parametrize("sub", RESOLVING_SUBCOMMANDS)
+def test_cli_resolve_error_still_refuses_the_polytomy(poly_file, sub) -> None:
+    """The seed plumbing must not have loosened the binary-tree requirement."""
+    prefix = poly_file.parent / f"strict_{sub}"
+    res = CliRunner().invoke(
+        cli, _argv(sub, poly_file, prefix, ["--resolve", "error", "--seed", "7"])
+    )
+    assert res.exit_code != 0
+    assert "polytom" in str(res.exception)
+    assert not list(poly_file.parent.glob(f"{prefix.name}_*"))
+
+
+# ---------------------------------------------------------------------------
+#  -- FigTree readability of the emitted timetree (gate G2c)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.gate("G2c")
+def test_emitted_nexus_satisfies_the_figtree_readability_contract(
+    tmp_path: Path,
+) -> None:
+    """Structural contract behind "FigTree opens OpenRelTime timetrees".
+
+    FigTree is not importable here, so this asserts the properties a FigTree
+    (and ape's ``read.nexus``) parser depends on rather than launching the GUI:
+
+    * a ``#NEXUS`` header and balanced ``BEGIN``/``END`` blocks;
+    * the rooted-tree token ``[&R]`` on the ``TREE`` line, without which
+      FigTree treats the topology as unrooted;
+    * a TAXA block whose labels are exactly the tip labels and which carries no
+      node annotations, because annotations there are read as taxon comment
+      fields and shift the tip mapping;
+    * one ``[&rate=...]`` comment per node — keyed by label on the tips and
+      attached positionally after the closing parenthesis on internal clades,
+      which is the Newick-Hudson convention ape and R3F emit and FigTree's
+      comment parser consumes;
+    * numeric branch lengths throughout.
+
+    The engine's own bracket-aware reader is used as the independent parser: a
+    round trip that recovers every rate shows the comments are well formed and
+    correctly placed, not merely present as text.
+    """
+    tree = _simple_tree()
+    rates = {n.node_id: round(0.25 * n.node_id, 4) for n in tree.walk()}
+    horizon = max(n.node_id for n in tree.walk())
+    times = {
+        n.node_id: 0.0 if n.is_tip() else (horizon - n.node_id + 1) * 0.05
+        for n in tree.walk()
+    }
+    nexus = write_nexus(tree, rate_map=rates, time_map=times)
+
+    # -- header and blocks
+    assert nexus.lstrip().startswith("#NEXUS")
+    assert nexus.count("BEGIN ") == nexus.count("END;") == 2
+    taxa_block = nexus.split("BEGIN TAXA;")[1].split("END;")[0]
+    trees_block = nexus.split("BEGIN TREES;")[1]
+
+    # -- the rooted token FigTree needs
+    tree_line = [ln for ln in trees_block.splitlines() if ln.strip().startswith("TREE")][0]
+    assert "[&R]" in tree_line, tree_line
+
+    # -- TAXA block: exactly the tips, and annotation-free
+    declared = taxa_block.split("TAXLABELS")[1].replace(";", "").split()
+    assert sorted(declared) == sorted(tree.tip_labels())
+    assert len(declared) == tree.n_tips()
+    assert "[&" not in taxa_block, "annotations in TAXA would shift FigTree's mapping"
+
+    # -- one rate comment per node: tips by label, internal clades positionally
+    assert trees_block.count("[&rate=") == len(rates)
+    body = tree_line.split("[&R]", 1)[1]
+    tip_annots = re.findall(r"([A-Za-z0-9_.|-]+)\[&rate=([-\d.eE+]+)\]", body)
+    internal_annots = re.findall(r"\)\[&rate=([-\d.eE+]+)\]", body)
+    assert sorted(lbl for lbl, _ in tip_annots) == sorted(tree.tip_labels())
+    assert len(internal_annots) == tree.n_internal()
+    assert len(tip_annots) + len(internal_annots) == len(rates)
+    for _, value in tip_annots:
+        assert float(value) > 0
+    for value in internal_annots:
+        assert float(value) > 0
+
+    # -- the tip annotations really carry the rates we asked for
+    tip_rates = {n.node_id: rates[n.node_id] for n in tree.walk() if n.is_tip()}
+    assert {float(v) for _, v in tip_annots} == {float(v) for v in tip_rates.values()}
+
+    # -- branch lengths are numeric everywhere, including the root edge
+    for length in re.findall(r":([-\d.eE+]+)", body):
+        assert math.isfinite(float(length))
+
+    # -- an independent bracket-aware parse recovers every rate
+    out = tmp_path / "figtree.nexus"
+    out.write_text(nexus)
+    back = read_tree(out, fmt="nexus")
+    assert node_rates(back) == pytest.approx(rates, rel=1e-9)
+
+
+@pytest.mark.gate("G2c")
+def test_plain_newick_output_drops_rate_annotations(tmp_path: Path) -> None:
+    """The documented limit: only ``.nexus`` keeps ``[&rate=...]``.
+
+    ``to_newick()`` has no ``rate_map`` parameter, so a ``.nwk`` artefact is not
+    FigTree-annotatable.  Asserting the limitation keeps it from silently
+    becoming a claim, and points users at the ``.nexus`` artefact instead.
+    """
+    tree = _simple_tree()
+    rates = {n.node_id: 1.0 for n in tree.walk()}
+    assert "[&rate=" in write_nexus(tree, rate_map=rates)
+
+    path = tmp_path / "plain.nwk"
+    path.write_text(to_newick(tree))
+    assert "[&rate=" not in path.read_text()

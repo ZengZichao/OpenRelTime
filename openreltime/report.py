@@ -8,6 +8,8 @@ path (gate G3, docs/validation.md).
 from __future__ import annotations
 
 import json
+import logging
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -18,6 +20,8 @@ import pandas as pd
 from .tree import PhyloNode
 from .treeio import to_newick
 from .treeio import write_nexus
+
+logger = logging.getLogger("openreltime")
 
 
 def node_table(tree: PhyloNode) -> pd.DataFrame:
@@ -46,6 +50,60 @@ def node_table(tree: PhyloNode) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _non_finite_to_null(value: Any, _path: str = "") -> tuple[Any, list[str]]:
+    """Return *value* with every non-finite float set to ``None``, plus the paths.
+
+    Also unwraps numpy scalars, which :func:`json.dumps` cannot serialise at all.
+    The returned path list names each JSON pointer whose value was dropped.
+    """
+    replaced: list[str] = []
+    if isinstance(value, bool) or value is None:
+        return value, replaced
+    if isinstance(value, (int, str)):
+        return value, replaced
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            return None, [_path or "<root>"]
+        return value, replaced
+    if isinstance(value, dict):
+        out: dict[Any, Any] = {}
+        for key, item in value.items():
+            cleaned, paths = _non_finite_to_null(item, f"{_path}/{key}")
+            out[key] = cleaned
+            replaced.extend(paths)
+        return out, replaced
+    if isinstance(value, (list, tuple)):
+        seq: list[Any] = []
+        for i, item in enumerate(value):
+            cleaned, paths = _non_finite_to_null(item, f"{_path}[{i}]")
+            seq.append(cleaned)
+            replaced.extend(paths)
+        return seq, replaced
+    return value, replaced
+
+
+def _block_non_finite(block: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Sanitise one analysis block and describe what was lost in a warning."""
+    sanitized, replaced = _non_finite_to_null(block)
+    sanitized = sanitized if isinstance(sanitized, dict) else {}
+    if not replaced:
+        return sanitized, []
+    message = (
+        "non-finite value(s) replaced by null so the report stays strict JSON at: "
+        + ", ".join(replaced)
+        + "; the analysis produced a value that is not a finite number, so it is "
+        "reported as null rather than as a measurement"
+    )
+    warnings = sanitized.get("warnings")
+    merged = list(warnings) if isinstance(warnings, list) else []
+    merged.append(message)
+    sanitized["warnings"] = merged
+    logger.warning("%s: %s", sanitized.get("analysis", "unknown"), message)
+    return sanitized, replaced
+
+
 def write_report(prefix: str | Path, payload: dict[str, Any]) -> Path:
     """Merge *payload* (keyed by its ``analysis`` field) into ``<prefix>_report.json``.
 
@@ -54,6 +112,13 @@ def write_report(prefix: str | Path, payload: dict[str, Any]) -> Path:
     one prefix stay inspectable and reproducible instead of overwriting each
     other.  Legacy files containing a single ``{"analysis": ...}`` block are
     re-keyed transparently on first merge.
+
+    The file is written as *strict* JSON (``allow_nan=False``): ``Infinity`` and
+    ``NaN`` are not valid JSON literals and every RFC 8259 parser - including
+    ``JSON.parse`` in browsers - rejects a document containing them.  A
+    non-finite value is therefore emitted as ``null`` and the affected analysis
+    block gains an explicit warning naming the JSON path that lost its number, so
+    a report can never present a damaged statistic as if it were a measurement.
     """
     path = Path(f"{prefix}_report.json")
     data: dict[str, Any] = {}
@@ -68,8 +133,13 @@ def write_report(prefix: str | Path, payload: dict[str, Any]) -> Path:
             else:
                 data = loaded
     key = str(payload.get("analysis", "unknown"))
-    data[key] = payload
-    path.write_text(json.dumps(data, indent=2) + "\n")
+    merged: dict[str, Any] = {**data, key: payload}
+    out: dict[str, Any] = {}
+    for block_key, block in merged.items():
+        out[block_key] = (
+            _block_non_finite(block)[0] if isinstance(block, dict) else block
+        )
+    path.write_text(json.dumps(out, indent=2, allow_nan=False) + "\n")
     return path
 
 

@@ -8,7 +8,10 @@ This module is *not* on the core algorithmic path.  It provides:
    RelTime-JA);
 2. a runner that invokes ``megacc`` through
    :func:`openreltime._external.run_tool` (validated argument list, no
-   shell) and probes its version banner;
+   shell), probes its version banner and - when a ``report_prefix`` is given -
+   writes a ``<prefix>_report.json`` recording the parameters, the probed
+   ``megacc`` release and the artefacts, so a MEGA-versus-OpenRelTime comparison
+   states which MEGA it compared against;
 3. a parser that reads *megacc's own numbers* — the node ages of its time
    tree, or its tabulated node-time output — back into an R3F-style node
    table whose ``source`` column says where every figure came from.
@@ -30,8 +33,13 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from ._external import resolve_executable, run_tool, validate_tokens
-from .report import node_table
+from ._external import (
+    probe_version,
+    resolve_executable,
+    run_tool,
+    validate_tokens,
+)
+from .report import node_table, write_report
 from .tree import PhyloNode
 from .treeio import _extract_newick_from_nexus, parse_newick, read_tree
 
@@ -75,6 +83,7 @@ def run_megacc(
     outgroup: Optional[list[str]] = None,
     mao: Optional[str | Path] = None,
     workdir: Optional[str | Path] = None,
+    report_prefix: Optional[str | Path] = None,
     **_: Any,
 ) -> tuple[Path, list[Path]]:
     """Run ``megacc`` RelTime on a branch-length tree.
@@ -82,12 +91,22 @@ def run_megacc(
     Every path is validated and the external process is started by
     :func:`openreltime._external.run_tool` (argument list, no shell).
 
+    Parameters
+    ----------
+    report_prefix:
+        When given, ``<report_prefix>_report.json`` is written with the
+        effective parameters, the ``megacc`` banner the probe returned and the
+        artefacts produced.  No MEGA release is pinned in code or CI, so this is
+        the only record of which program produced the numbers; omitting it keeps
+        the bridge side-effect free.
+
     Returns
     -------
     (mao_path, output_files)
         The generated ``.mao`` path and the produced output files.
     """
     executable = resolve_executable(megacc)
+    banner, notes = probe_version(executable, tool="megacc", runner=run_tool)
     work = Path(workdir) if workdir else Path(tempfile.mkdtemp(prefix="ort_megacc_"))
     work.mkdir(parents=True, exist_ok=True)
     mao_path = Path(mao) if mao else write_mao(work / "reltimeFromBranchLengths.mao")
@@ -105,8 +124,6 @@ def run_megacc(
     if calibrations is not None:
         calib_pair = ["-c", _safe_path(calibrations)]
 
-    probe = run_tool([executable, "--version"], check=False)
-    banner = (probe.stdout or probe.stderr or b"").decode(errors="replace").strip()
     if banner:
         logger.info("megacc banner: %s", banner.splitlines()[0])
 
@@ -124,6 +141,25 @@ def run_megacc(
         ]
     )
     outputs = sorted(p for p in work.iterdir() if p.is_file() and p.suffix != ".mao")
+    if report_prefix is not None:
+        write_report(
+            report_prefix,
+            {
+                "analysis": "megacc",
+                "parameters": {
+                    "tree": str(tree),
+                    "megacc": executable,
+                    "calibrations": str(calibrations) if calibrations else None,
+                    "outgroup": sorted(outgroup) if outgroup else None,
+                    "mao": str(mao_path),
+                    "workdir": str(work),
+                },
+                "warnings": list(notes),
+                "tool": {"name": "megacc", "version": banner},
+                "n_outputs": len(outputs),
+                "artefacts": [str(p) for p in outputs],
+            },
+        )
     return mao_path, outputs
 
 

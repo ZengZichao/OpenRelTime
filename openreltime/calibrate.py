@@ -8,9 +8,11 @@ Implements the calibration mechanism of MEGA RelTime as described in
 
 * ``bounds`` method: the global time factor ``f`` is searched as the midpoint
   of the intersection of the per-calibration feasible intervals
-  ``[min/t, max/t]``; residual violations trigger proportional rate scaling
-  of the offending lineage (hard-bound semantics of Tamura et al. 2013),
-  propagated to descendants, iterated up to ``CALIBRATION_MAX_ITER`` times.
+  ``[min/t, max/t]``; a one-sided bound set takes its finite edge instead, which
+  keeps the result invariant to the unit of the supplied ages.  Residual
+  violations trigger proportional rate scaling of the offending lineage
+  (hard-bound semantics of Tamura et al. 2013), propagated to descendants,
+  iterated up to ``CALIBRATION_MAX_ITER`` times.
 * ``effective`` method (msz236): for calibrations carrying a probability
   density, two dates are sampled from the density per replicate and used as
   a (min, max) pair; the analysis is repeated ``n_effective`` times and the
@@ -28,7 +30,14 @@ a finite ``min_bound`` nor a finite ``max_bound`` contributes no constraint at
 all, so the feasible-factor search would return ``f = inf`` and every absolute
 age would silently become ``inf``.  Such rows are rejected at
 construction time, and ``method="bounds"`` additionally rejects density-only
-rows, which only the effective-bounds procedure can use.
+rows, which only the effective-bounds procedure can use.  ``density_params`` is
+checked against a per-family key whitelist (:data:`DENSITY_PARAM_KEYS`) so a
+mis-spelled prior cannot be silently sampled from the family's defaults, and an
+unsatisfiable nested bound (a descendant older than its ancestor) raises instead
+of returning a result that violates the caller's own bounds.  That guarantee is
+checked twice: once on the worst violator inside the repair loop and once on the
+converged vector as a whole, so a solution that ends non-monotonic or with a
+negative age is rejected rather than written out with a warning.
 """
 
 from __future__ import annotations
@@ -53,6 +62,8 @@ logger = logging.getLogger("openreltime")
 __all__ = [
     "Calibration",
     "CalibrationCancelled",
+    "DENSITY_PARAM_KEYS",
+    "DENSITY_TYPES",
     "density_quantiles",
     "parse_calibrations",
     "calibrate",
@@ -60,9 +71,72 @@ __all__ = [
 
 DENSITY_TYPES = ("uniform", "exponential", "normal", "lognormal")
 
+#: The *complete* parameter key set of every supported density family.
+#:
+#: ``_sample_density_pair`` and :func:`density_quantiles` used to read each key
+#: through ``params.get(key, default)``, so ``density='normal',
+#: density_params='mu=5;sigma=1'`` was silently sampled as ``N(0, 1)``: the
+#: intended prior was discarded and a different one substituted without a word.
+#: Keys are therefore validated against this whitelist, which is also what makes
+#: the documented "parameters are parsed strictly" claim in ``docs/parameters.md``
+#: true: an unknown key (a typo, or a different family's vocabulary) and a
+#: missing required key both raise instead of being ignored or defaulted.
+DENSITY_PARAM_KEYS: dict[str, tuple[str, ...]] = {
+    "uniform": ("min", "max"),
+    "exponential": ("offset", "mean"),
+    "normal": ("mean", "sd"),
+    "lognormal": ("offset", "meanlog", "sdlog"),
+}
+
 
 class CalibrationCancelled(RuntimeError):
     """Raised when a caller-requested cancellation arrives mid-calibration."""
+
+
+#: Relative slack of the post-solve time-order check in
+#: :meth:`_CalibratedTree._check_time_order`.  ``_scale_subtree`` rewrites every
+#: duration of a lineage in floating point, so a legitimate solution can put a
+#: descendant a few ULP above its ancestor; only a real inversion is rejected.
+#: Same order as the ``_PIN_TOL`` the CI layer uses for "sits on the bound".
+_MONOTONIC_TOL = 1e-9
+
+
+def _fmt_bound(value: Optional[float]) -> str:
+    """Render one calibration bound for an error message (``None`` = open)."""
+    return "none" if value is None else f"{value:.6g}"
+
+
+def _validate_density_params(
+    density: str, params: dict[str, float], *, context: str
+) -> None:
+    """Raise unless *params* holds exactly the keys *density* declares.
+
+    ``context`` prefixes the message with whatever identifies the offending
+    row (a ``node_id``/``taxon_set`` description, or a file and line number).
+    """
+    try:
+        required = DENSITY_PARAM_KEYS[density]
+    except KeyError:  # pragma: no cover - density family checked at construction
+        raise ValueError(
+            f"{context}: unsupported density {density!r}; "
+            f"choose from {DENSITY_TYPES}"
+        ) from None
+    unknown = sorted(set(params) - set(required))
+    if unknown:
+        raise ValueError(
+            f"{context}: density {density!r} accepts only the keys "
+            f"{list(required)}, but {unknown} were given. Those keys are "
+            "ignored by no sampler: they are rejected, because silently "
+            "defaulting them would substitute a different prior for the one "
+            "you asked for."
+        )
+    missing = [key for key in required if key not in params]
+    if missing:
+        raise ValueError(
+            f"{context}: density {density!r} needs the keys "
+            f"{list(required)}, but {missing} are missing. Every parameter of "
+            "the family must be stated explicitly; none is defaulted."
+        )
 
 
 @dataclass(frozen=True)
@@ -75,7 +149,10 @@ class Calibration:
     ``method="bounds"`` densities are not used at all, so such a row is rejected
     here rather than being allowed to drive the global time factor to ``inf``.
     ``density_params`` keys: uniform ``min,max``; exponential ``offset,mean``;
-    normal ``mean,sd``; lognormal ``offset,meanlog,sdlog``.
+    normal ``mean,sd``; lognormal ``offset,meanlog,sdlog``.  The key set is
+    validated against :data:`DENSITY_PARAM_KEYS`: an unknown key or a missing
+    required key raises, so a mis-spelled prior can never be silently sampled
+    from the family's defaults.
     """
 
     taxon_set: Optional[frozenset[str]] = None
@@ -136,6 +213,10 @@ class Calibration:
                 f"{self.describe()}: unsupported density {self.density!r}; "
                 f"choose from {DENSITY_TYPES}"
             )
+        if self.density is not None:
+            _validate_density_params(
+                self.density, self.density_params, context=self.describe()
+            )
         if not self.has_bound and self.density is None:
             raise ValueError(
                 f"{self.describe()}: a calibration needs at least one finite bound "
@@ -156,7 +237,11 @@ def parse_calibrations(path: str | Path) -> list[Calibration]:
     ``density_params`` (semicolon-separated ``key=value`` pairs, optional).
 
     Only explicit ``key=value`` parsing is performed; expression evaluation
-    (``eval``) is deliberately never used on this input.
+    (``eval``) is deliberately never used on this input.  ``density_params`` is
+    read *strictly*: every key must belong to the declared family's key set
+    (:data:`DENSITY_PARAM_KEYS`), all of the family's keys must be present, and a
+    non-empty ``density_params`` on a row without a ``density`` raises rather
+    than being dropped.
     """
     path = Path(path)
     df = pd.read_csv(path, sep="\t", dtype=str, keep_default_na=False)
@@ -197,7 +282,14 @@ def parse_calibrations(path: str | Path) -> list[Calibration]:
             )
         dparams: dict[str, float] = {}
         raw_params = str(row.get("density_params", "")).strip()
-        if raw_params not in ("", ".", "NA", "-") and density is not None:
+        if raw_params not in ("", ".", "NA", "-"):
+            if density is None:
+                raise ValueError(
+                    f"{path} line {line}: density_params={raw_params!r} given "
+                    "without a density column; there is no family to read the "
+                    "keys against, so they would be silently ignored -- add "
+                    f"density (one of {DENSITY_TYPES}) or drop density_params"
+                )
             for chunk in raw_params.split(";"):
                 chunk = chunk.strip()
                 if not chunk:
@@ -229,21 +321,26 @@ def parse_calibrations(path: str | Path) -> list[Calibration]:
 
 
 def _sample_density_pair(cal: Calibration, rng: np.random.Generator) -> tuple[float, float]:
-    """Sample two ordered dates from a calibration density (msz236)."""
+    """Sample two ordered dates from a calibration density (msz236).
+
+    The keys are read directly, never through ``dict.get`` with a fallback: the
+    family's parameter set was already validated when *cal* was constructed, so
+    a default here would be a silent mis-specification rather than a convenience.
+    """
     p = cal.density_params
     assert cal.density is not None
     if cal.density == "uniform":
-        a, b = p.get("min", 0.0), p.get("max", 1.0)
+        a, b = p["min"], p["max"]
         x = rng.uniform(a, b, size=2)
     elif cal.density == "exponential":
-        offset, mean = p.get("offset", 0.0), p.get("mean", 1.0)
+        offset, mean = p["offset"], p["mean"]
         x = offset + rng.exponential(mean, size=2)
     elif cal.density == "normal":
-        mu, sd = p.get("mean", 0.0), p.get("sd", 1.0)
+        mu, sd = p["mean"], p["sd"]
         x = rng.normal(mu, sd, size=2)
     elif cal.density == "lognormal":
-        offset = p.get("offset", 0.0)
-        mu, sd = p.get("meanlog", 0.0), p.get("sdlog", 1.0)
+        offset = p["offset"]
+        mu, sd = p["meanlog"], p["sdlog"]
         x = offset + rng.lognormal(mu, sd, size=2)
     else:  # pragma: no cover - validated at parse time
         raise ValueError(cal.density)
@@ -261,19 +358,26 @@ def density_quantiles(
     effective bounds); :mod:`openreltime.ci` uses the same pair as the
     *calibration's own* uncertainty for nodes whose age is pinned at a hard
     bound, where the delta method of eq (7) returns exactly zero.
+
+    ``params`` is validated against :data:`DENSITY_PARAM_KEYS` before it is
+    used, so a partial or mis-spelled parameter set raises instead of being
+    filled in from the family's defaults.
     """
+    _validate_density_params(
+        density, params, context=f"density_quantiles({density!r})"
+    )
     if density == "uniform":
-        a, b = params.get("min", 0.0), params.get("max", 1.0)
+        a, b = params["min"], params["max"]
         dist = stats.uniform(loc=a, scale=max(b - a, 0.0))
     elif density == "exponential":
-        dist = stats.expon(loc=params.get("offset", 0.0), scale=params.get("mean", 1.0))
+        dist = stats.expon(loc=params["offset"], scale=params["mean"])
     elif density == "normal":
-        dist = stats.norm(loc=params.get("mean", 0.0), scale=params.get("sd", 1.0))
+        dist = stats.norm(loc=params["mean"], scale=params["sd"])
     elif density == "lognormal":
         dist = stats.lognorm(
-            s=params.get("sdlog", 1.0),
-            scale=math.exp(params.get("meanlog", 0.0)),
-            loc=params.get("offset", 0.0),
+            s=params["sdlog"],
+            scale=math.exp(params["meanlog"]),
+            loc=params["offset"],
         )
     else:
         raise ValueError(f"unsupported density {density!r}; choose from {DENSITY_TYPES}")
@@ -303,13 +407,20 @@ class _CalibratedTree:
     # -- core ---------------------------------------------------------------
 
     def solve(self) -> tuple[float, np.ndarray, list[str]]:
-        """Return (f, absolute node times, log messages) for the fixed bounds."""
+        """Return (f, absolute node times, log messages) for the fixed bounds.
+
+        Raises :class:`ValueError` if the converged ages are not nested in the
+        tree (see :meth:`_check_time_order`): a solution the violation loop
+        reports as satisfied is still nonsense if it puts a descendant older
+        than its ancestor or below the present.
+        """
         times = self.rel_times.copy()
         messages: list[str] = []
         f = self._feasible_factor(times)
         times = times * f
         times, iter_log = self._enforce_bounds(times)
         messages.extend(iter_log)
+        self._check_time_order(times)
         if self.root_pos < times.size and times[self.root_pos] > 0:
             f = float(times[self.root_pos] / max(self.rel_times[self.root_pos], 1e-300))
         return f, times, messages
@@ -321,6 +432,16 @@ class _CalibratedTree:
         ``max`` leaves the interval unbounded on both sides, which would return
         ``inf`` and turn every absolute age into ``inf`` without a word of
         complaint.
+
+        A one-sided bound set takes its finite edge: with only minimum bounds
+        ``f = max(min/t)``, with only maximum bounds ``f = min(max/t)``, so the
+        binding node lands exactly on that bound.  Both edges live on the same
+        relative scale as the ``min``/``max`` ages the caller supplied, so the
+        solution is invariant to the unit of those ages.  (An earlier release
+        floored either edge at ``1.0``, a dimensionless constant of the
+        arbitrary RRF relative scale: it left a minimum bound that asked for a
+        *younger* tree inert and inflated a maximum bound above it, and it made
+        the same physical constraint behave differently in Ma and in Ga.)
         """
         lo, hi = -np.inf, np.inf
         unbounded = [
@@ -345,16 +466,17 @@ class _CalibratedTree:
             # violation loop can migrate the solution toward feasibility
             f = (lo + hi) / 2 if math.isfinite(lo) and math.isfinite(hi) else max(lo, hi)
         elif not math.isfinite(lo):
-            f = max(hi, 1.0)
+            f = hi  # max-only bound set: the finite edge itself
         elif not math.isfinite(hi):
-            f = max(lo, 1.0)
+            f = lo  # min-only bound set: the finite edge itself
         else:
             f = (lo + hi) / 2
         if not math.isfinite(f) or f <= 0:
             raise ValueError(
                 f"the calibration set admits no usable time factor (f={f!r}): "
                 "check that every relative node time of the calibrated nodes is "
-                "positive and that the bounds are mutually compatible -> "
+                "positive and that the bounds are mutually compatible (a bound "
+                "set whose only finite edge is 0 fixes no time scale) -> "
                 + "; ".join(
                     f"node {node.node_id} [{mn}, {mx}]"
                     for node, mn, mx in self.bounds
@@ -363,23 +485,42 @@ class _CalibratedTree:
         return float(f)
 
     def _enforce_bounds(self, times: np.ndarray) -> tuple[np.ndarray, list[str]]:
-        """Hard-bound violation adjustment (msz236 / Tamura et al. 2013)."""
+        """Hard-bound violation adjustment (msz236 / Tamura et al. 2013).
+
+        A violation the geometry of the tree cannot absorb - a descendant bound
+        whose ancestor is already younger than the bound asks it to be - raises
+        :class:`ValueError` rather than returning: the remaining rows would be
+        abandoned mid-loop and the returned ages would violate the very
+        ``min_bound``/``max_bound`` the caller supplied.
+
+        The nested check below covers only the *worst violator of the current
+        round*, so it cannot see an inversion the loop has just created
+        elsewhere in the tree; :meth:`_check_time_order` re-checks the whole
+        converged vector, which is what makes the guarantee total rather than
+        per-round.
+        """
         messages: list[str] = []
         for _ in range(C.CALIBRATION_MAX_ITER):
-            worst: tuple[float, int, float, bool] = (0.0, -1, 0.0, False)
+            worst: tuple[float, int, float, bool, tuple[Optional[float], Optional[float]]] = (
+                0.0,
+                -1,
+                0.0,
+                False,
+                (None, None),
+            )
             for node, mn, mx in self.bounds:
                 i = self.pos[node.node_id]
                 if mn is not None and times[i] < mn:
                     severity = (mn - times[i]) / mn
                     if severity > worst[0]:
-                        worst = (severity, i, mn, True)  # too young
+                        worst = (severity, i, mn, True, (mn, mx))  # too young
                 if mx is not None and times[i] > mx:
                     severity = (times[i] - mx) / mx
                     if severity > worst[0]:
-                        worst = (severity, i, mx, False)  # too old
+                        worst = (severity, i, mx, False, (mn, mx))  # too old
             if worst[1] < 0 or worst[0] < 1e-12:
                 return times, messages
-            severity, idx, target, too_young = worst
+            severity, idx, target, too_young, (row_min, row_max) = worst
             node = self.internal_nodes[idx]
             # scale the node's stem lineage so the node reaches the bound
             p = node.parent
@@ -398,14 +539,20 @@ class _CalibratedTree:
                     f"satisfy node {node.node_id}"
                 )
                 continue
-            dt_stem = times[self.pos[p.node_id]] - times[idx]
-            need = times[self.pos[p.node_id]] - target
+            parent_time = times[self.pos[p.node_id]]
+            dt_stem = parent_time - times[idx]
+            need = parent_time - target
             if need <= 0 or dt_stem <= 0:
-                messages.append(
-                    f"conflicting calibration at node {node.node_id}: parent time "
-                    f"{times[self.pos[p.node_id]]:.4g} cannot host target {target:.4g}"
+                raise ValueError(
+                    f"conflicting calibration constraints: node {node.node_id} "
+                    f"(bound [min={_fmt_bound(row_min)}, max={_fmt_bound(row_max)}]) "
+                    f"cannot be placed at {target:.6g}, because its ancestor "
+                    f"node {p.node_id} sits at {parent_time:.6g} and a descendant "
+                    "can never be older than its ancestor. Relax the bound on "
+                    "node "
+                    f"{node.node_id} or move the bound on node {p.node_id} "
+                    "toward the root."
                 )
-                return times, messages
             q = dt_stem / need  # rate scale (<1 slows -> older; >1 -> younger)
             self._scale_subtree(idx, q, times)
             messages.append(
@@ -417,6 +564,68 @@ class _CalibratedTree:
             + "; ".join(
                 f"node {n.node_id} [{mn}, {mx}]" for n, mn, mx in self.bounds
             )
+        )
+
+    def _check_time_order(self, times: np.ndarray) -> None:
+        """Raise unless the converged ages are non-negative and nested.
+
+        ``calibrate`` emits every tip at age 0.0, so two conditions over the
+        internal vector are exactly monotonicity and non-negativity over *all*
+        emitted node ages: an internal age below 0 inverts the parent--child
+        pair whose child is a tip, and an internal child older than its
+        internal parent inverts a nested pair.
+
+        The violation loop needs both.  It tests the worst violator of the
+        round it is fixing, so a repair that drags one lineage onto its bound
+        can leave an already-inverted subtree untouched - the loop exits as soon
+        as no *calibrated row* is violated any more, not as soon as the ages are
+        physically ordered.  The shipped ``example_calibrations.tsv`` under
+        ``method="effective"`` did exactly that: node 307 came back at
+        ``-3998.56`` Ma, node 306 older than its own ancestor 305, four
+        parent--child inversions and four ``NaN`` implied rates, reported as
+        warnings only.  Returning such a vector would make every downstream
+        number (implied rates, CIs, the written timetree) quietly wrong, so the
+        solution is rejected here and the offending nodes are named.
+        """
+        negative = [
+            self.internal_nodes[i].node_id
+            for i in range(times.size)
+            if times[i] < -_MONOTONIC_TOL
+        ]
+        inversions: list[tuple[int, int]] = []
+        for i, node in enumerate(self.internal_nodes):
+            parent = node.parent
+            if parent is None:
+                continue
+            pi = self.pos.get(parent.node_id)
+            if pi is None:  # pragma: no cover - ingroup parents are internal
+                continue
+            if times[i] > times[pi] + _MONOTONIC_TOL * max(abs(times[pi]), 1.0):
+                inversions.append((node.node_id, parent.node_id))
+        if not negative and not inversions:
+            return
+        details: list[str] = []
+        if negative:
+            details.append(
+                f"{len(negative)} node(s) older than the present (negative age): "
+                f"{sorted(negative)}"
+            )
+        if inversions:
+            shown = "; ".join(
+                f"node {child} at {times[self.pos[child]]:.6g} sits below its "
+                f"ancestor node {ancestor} at {times[self.pos[ancestor]]:.6g}"
+                for child, ancestor in inversions[:5]
+            )
+            more = f" (and {len(inversions) - 5} more)" if len(inversions) > 5 else ""
+            details.append(
+                f"{len(inversions)} parent-child inversion(s): {shown}{more}"
+            )
+        raise ValueError(
+            "conflicting calibration constraints: the repair loop converged on "
+            "node ages that are not nested in the tree -- " + "; ".join(details)
+            + ".  This means the calibration set is unsatisfiable by a "
+            "rate rescaling of this tree; relax the bounds or move them toward "
+            "the root."
         )
 
     def _scale_subtree(self, idx: int, q: float, times: np.ndarray) -> None:
@@ -525,7 +734,8 @@ def calibrate(
         ``"bounds"`` uses the min/max constraints directly; ``"effective"``
         derives effective bounds from densities with ``n_effective``
         replicates (msz236), also returning the empirical node-age
-        distribution quantiles.
+        distribution quantiles.  ``n_effective`` must be at least 2, since the
+        effective bounds are percentiles of the replicate distribution.
     seed:
         Seed for the effective-bounds sampling.
     taxon_table:
@@ -553,6 +763,22 @@ def calibrate(
         calibrated duration is not positive gets ``NaN`` there and is counted in
         ``params["n_lineages_dropped"]`` instead of being reported as a rate of
         0.
+
+    Raises
+    ------
+    ValueError
+        For an empty calibration list, a density-only row under
+        ``method="bounds"``, ``n_effective < 2``, an unknown or missing
+        ``density_params`` key (:data:`DENSITY_PARAM_KEYS`), and - the four
+        ways a constraint set can be *unsatisfiable* - the root being asked to
+        become younger/older than the tree allows, a descendant bound whose
+        ancestor is already younger than that bound asks it to be, the
+        violation loop exhausting :data:`openreltime._constants.CALIBRATION_MAX_ITER`
+        rounds, and the converged vector failing to be nested in the tree
+        (a negative age or a descendant older than its ancestor, named in the
+        message).  The two nested cases raise rather than warning: a returned
+        result would have violated the caller's own ``min_bound``/``max_bound``
+        and silently abandoned every remaining row.
     """
     if not calibrations:
         raise ValueError(
@@ -572,6 +798,7 @@ def calibrate(
     used_bounds: dict[int, tuple[Optional[float], Optional[float]]] = {
         node.node_id: (cal.min_bound, cal.max_bound) for node, cal in resolved
     }
+    n_rep: Optional[int] = None
     if method == "bounds":
         density_only = [
             (node, cal) for node, cal in resolved if cal.is_density_only
@@ -602,7 +829,20 @@ def calibrate(
             )
         records: list[dict[str, float]] = []
         keep = {n.node_id: [] for n, _ in resolved}
-        n_rep = max(int(n_effective), 2)
+        # msz236 effective bounds are *percentiles of a replicate distribution*:
+        # with fewer than two replicates the 2.5/97.5 pair is undefined.  Running
+        # two and reporting one (the old ``max(n_effective, 2)``) made the JSON
+        # record a replicate count that was never the number of solves performed.
+        n_rep = int(n_effective)
+        if n_rep < 2:
+            raise ValueError(
+                "method='effective' needs n_effective >= 2 replicates, got "
+                f"{n_effective!r}: the effective bounds are the 2.5/97.5 "
+                "percentiles of the replicate node-age distributions, which are "
+                "undefined for a single replicate (they would collapse to the "
+                "point estimate and report a zero-width interval). Use "
+                "method='bounds' for a single deterministic solve."
+            )
         all_nodes = [n for n in tree.walk() if not n.is_tip()]
         rep_frame = {n.node_id: [] for n in all_nodes}
         for rep in range(n_rep):
@@ -753,7 +993,7 @@ def calibrate(
     ]
     merged = {
         "method": method,
-        "n_effective": n_effective if method == "effective" else None,
+        "n_effective": n_rep if method == "effective" else None,
         "seed": seed,
         "rate_ratio_threshold": times.params.get("rate_ratio_threshold", 20.0),
         "mean": times.params.get("mean", "geometric"),

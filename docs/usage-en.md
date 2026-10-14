@@ -2,7 +2,7 @@
 
 **Language: English** · [中文](usage-zh.md)
 
-Version 0.1.0 · Requires Python ≥ 3.10 · Licence GPL-3.0-or-later
+Version 0.1.1 · Requires Python ≥ 3.10 · Licence GPL-3.0-or-later
 
 This guide covers installation, input preparation, every subcommand, the
 calibration file format, the output inventory, a pointer to the separately
@@ -18,7 +18,7 @@ limitations see [methods.md](methods.md).
 ### 1.1 From a source checkout or a release wheel
 
 > **Distribution.** This release ships as source plus the sdist and wheel
-> attached to [the v0.1.0 release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.0).
+> attached to [the v0.1.1 release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1).
 > It is not on a package index yet; an index release will be announced here.
 
 From a checkout:
@@ -33,7 +33,7 @@ Or without a clone, straight from the release — the `[plot]` extra pulls in
 matplotlib:
 
 ```bash
-python -m pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl"
+python -m pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl"
 ```
 
 `plot` (matplotlib visualisation) and `dev` (pytest, pytest-cov, ruff, mypy for
@@ -184,10 +184,14 @@ openreltime calibrate -i tree.nwk -c calibrations.tsv --outgroup og.txt \
 ```
 
 - `--method bounds` (default): hard min/max constraints.  The global factor
-  `f` is the midpoint of the feasible intersection; residual violations are
+  `f` is the midpoint of the feasible intersection, while a set that supplies
+  only minima or only maxima takes its finite edge (the node lands exactly on
+  that bound, independent of the time unit you used); residual violations are
   fixed by proportional rate scaling along the offending lineage
   (propagated to descendants, ≤ 100 iterations), otherwise the conflict is
-  reported;
+  reported.  A converged solution that is still negative in age or puts a
+  descendant below its ancestor is reported as an error naming those nodes,
+  not as a warning;
 - `--method effective`: msz236 density resampling; `--n-effective` sets the
   replicate count (default 10,000).  Outputs include the effective bounds
   table and empirical node-age quantiles.  A density-only row needs this
@@ -418,13 +422,13 @@ releases:
 
 ```bash
 pip install \
-  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl" \
-  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.0/openreltime_studio-0.1.0-py3-none-any.whl"
+  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl" \
+  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.1/openreltime_studio-0.1.1-py3-none-any.whl"
 openreltime-studio
 ```
 
 On Apple Silicon, Studio's release also attaches a prebuilt
-`OpenRelTimeStudio-v0.1.0-macOS-arm64.zip` that needs no Python at all.
+`OpenRelTimeStudio-v0.1.1-macOS-arm64.zip` that needs no Python at all.
 
 * Home page: <https://github.com/ZengZichao/OpenRelTime-Studio>
 * Interface capabilities: a fully bilingual UI (English / 简体中文, switched live from
@@ -482,9 +486,10 @@ bounds), msz014 (CorrTest) and btab307 (ddBD).
 | `outgroup [...] is not a complete clade` | the multi-tip outgroup MRCA also descends to unspecified tips; complete the outgroup or use `--outgroup-check warn` |
 | `outgroup taxon [...] not found in tree (as tip or group)` | the name is neither a tip nor a group; check the spelling or pass `--taxon-table` |
 | `conflicting calibration constraints` | calibration nodes contradict each other (e.g. child bounds older than parent); relax bounds |
+| `the repair loop converged on node ages that are not nested in the tree` | no rate rescaling of this tree can host the supplied bounds: the converged solution has a negative age or a descendant older than its ancestor, and the message names those node ids.  The shipped `data/examples/example_calibrations.tsv` under `--method effective` is a worked instance; replace it with `example_calibrations_feasible.tsv` or relax the bounds |
 | `could not be satisfied within 100 iterations` | same; see the listed nodes |
 | `a calibration needs at least one finite bound … but neither was given` | the row has `.` for `min_bound` and `max_bound`; add hard bounds, or run `--method effective` for a density-only row |
-| `Under method='bounds' a density does not count as a bound` | density-only calibration with `--method bounds`; switch to `--method effective` |
+| `method='bounds' cannot use density-only calibrations` | density-only calibration with `--method bounds`; add `min_bound`/`max_bound` to that row, or switch to `--method effective` |
 | `no 'calibrate' block in <prefix>_report.json` | `ci -c` was given a prefix that never ran `calibrate`; re-run `calibrate` with that `-o` |
 | `cannot locate the original tree` | the tree file moved since `calibrate` ran; re-run `calibrate` with the same `-i`/`-o` so `tree_file` is recorded |
 | `group '…' not found in …; available: …` | the name is neither in `--taxon-table` nor an auto-detected prefix; the message lists what is available |
@@ -503,9 +508,13 @@ bounds), msz014 (CorrTest) and btab307 (ddBD).
   (`tests/`).  The desktop front end carries its own tests in the separate
   `OpenRelTime-Studio` project (§7);
 - continuous integration: `.github/workflows/ci.yml` runs that suite on
-  Python 3.10, 3.11, 3.12 and 3.13 on Ubuntu and macOS.  Windows is a declared
-  target but is **not** covered by CI, and external-tool paths (IQ-TREE for
-  `blb`, MEGA-CC for `megacc`) are not installed in the workflow — see
-  `docs/validation.md` for the tested-vs-claimed breakdown;
-- all randomness (effective bounds, BLB, sister resampling) flows through
-  `--seed` and is recorded in `_report.json`.
+  Python 3.10, 3.11, 3.12 and 3.13 on Ubuntu, on Python 3.13 on macOS, and on
+  Python 3.13 on Windows (`windows-latest`, engine plus end-to-end suites).
+  The Windows job was added for 0.1.1 and its first run is the next push;
+  external-tool paths (IQ-TREE for `blb`, MEGA-CC for `megacc`) are not
+  installed in the workflow on **any** platform — see `docs/validation.md` for
+  the tested-vs-claimed breakdown;
+- all randomness (polytomy binarisation, effective bounds, BLB, sister
+  resampling) flows through `--seed` and is recorded in `_report.json`.  Only
+  the polytomy draw uses the stdlib `random.Random` instead of numpy, and
+  `monophyly` writes no report block at all — see `docs/parameters.md`.

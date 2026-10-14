@@ -22,6 +22,7 @@ Each test pins one contract the calibration and CI code must satisfy:
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -57,6 +58,9 @@ GUARD_TREE = (
     "(E:0.2,(F:0.1,G:0.3):0.2):0.4):0.0;"
 )
 
+
+
+pytestmark = pytest.mark.gate("G7")
 
 def _tree(newick: str) -> PhyloNode:
     tree = parse_newick(newick)
@@ -262,22 +266,48 @@ def test_one_sided_bound_keeps_truncation_but_not_zero_width() -> None:
 
 
 def test_unsatisfied_constraint_never_inverts_the_interval() -> None:
-    """A bound the solver cannot reach must not print a negative width."""
+    """A bound the estimate does not reach must not print a negative width.
+
+    The nested pair below used to return a result that violated its own
+    ``min_bound`` with nothing but a warning string; the solver now refuses it
+    outright, so the CI layer's anti-inversion guard is exercised on a record
+    whose *reported* hard bound the point estimate cannot reach.
+    """
     tree = _tree(CLOCKLIKE)
     times = rrf_times(tree)
+    with pytest.raises(ValueError, match="descendant can never be older"):
+        calibrate(
+            times,
+            [
+                Calibration(node_id=10, min_bound=0.5, max_bound=0.9),
+                Calibration(node_id=12, min_bound=0.1, max_bound=0.3),
+            ],
+            method="bounds",
+        )
+    # a reachable pair gives a well-formed result; stretching the reported
+    # min_bound beyond the estimate reproduces the "constraint not met" state
+    # the guard is written for, while the effective bounds the differentiation
+    # pipeline re-runs stay satisfiable
     cal = calibrate(
-        times,
-        [
-            Calibration(node_id=10, min_bound=0.5, max_bound=0.9),
-            Calibration(node_id=12, min_bound=0.1, max_bound=0.3),
-        ],
-        method="bounds",
+        times, [Calibration(node_id=10, min_bound=0.5, max_bound=0.9)], method="bounds"
     )
-    assert cal.warnings, "the solver must report the constraint it could not meet"
-    ci = confidence_interval(cal, seq_length=30)
+    unreachable = replace(
+        cal,
+        params={**cal.params, "method": "effective"},
+        calibrations=[
+            replace(
+                cal.calibrations[0],
+                min_bound=4.0,
+                used_min_bound=0.5,
+                used_max_bound=0.9,
+            )
+        ],
+    )
+    ci = confidence_interval(unreachable, seq_length=30)
     assert (ci.table["width"] >= 0.0).all()
     assert (ci.table["lower"] <= ci.table["time"] + 1e-12).all()
     assert (ci.table["upper"] >= ci.table["time"] - 1e-12).all()
+    assert "calibration constraint not satisfied" in _row(ci, 10)["notes"]
 
 
 # ---------------------------------------------------------------------------

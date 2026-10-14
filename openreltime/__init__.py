@@ -12,6 +12,27 @@ Public API::
     ct = openreltime.corrtest(tree)
     bd = openreltime.ddbd(tree, anchor_time=1.0)
 
+Namespace contract
+------------------
+Three analysis modules are named after the function they expose
+(``calibrate``, ``corrtest``, ``ddbd``).  A package attribute can hold only one
+object, so the *module* wins the binding -- ``openreltime.calibrate`` is the
+submodule and ``openreltime.calibrate.Calibration`` therefore resolves -- and the
+module object is made callable as its own eponymous entry point
+(:class:`_EntryPointModule`).  Every one of these forms works::
+
+    import openreltime
+    openreltime.calibrate(times, cals)              # call the analysis
+    openreltime.calibrate.Calibration(node_id=9)    # read the module's symbols
+    from openreltime.calibrate import calibrate     # the plain function
+    from openreltime import calibrate as calibrate_module   # the module
+
+The callable-module binding is what keeps the documented ``openreltime.calibrate(
+...)`` call form and the OpenRelTime-Studio adapter working unchanged; nothing
+here silently rebinds a module to a function.  ``__all__`` lists the
+function-level API; the submodules are reachable as attributes and through the
+dotted import path.
+
 References
 ----------
 * Tamura K, Tao Q, Kumar S. Mol Biol Evol 35:1770-1782 (2018) -- RRF.
@@ -22,6 +43,10 @@ References
 """
 
 from __future__ import annotations
+
+import sys
+from types import ModuleType
+from typing import Any
 
 from . import _constants
 from ._constants import VERSION as __version__
@@ -54,6 +79,49 @@ from .taxonomy import (
 from .times import rrf_rates_times, rrf_times
 from .tree import PhyloNode
 from .treeio import parse_newick, read_tree, to_newick, write_nexus
+
+
+class _EntryPointModule(ModuleType):
+    """Submodule that also *calls* the entry-point function it defines.
+
+    ``openreltime.calibrate`` has to name the module for
+    ``openreltime.calibrate.Calibration`` to resolve, while the documented
+    ``openreltime.calibrate(times, calibrations)`` call form has to keep working
+    for existing callers.  A module whose ``__call__`` forwards to the attribute
+    named by ``__entry_point__`` satisfies both at once.  The forwarded call is
+    resolved lazily, so nothing is duplicated and the function object stays the
+    single implementation.
+    """
+
+    #: name of the attribute ``__call__`` forwards to (set per submodule)
+    __entry_point__: str = ""
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        target = getattr(self, self.__entry_point__)
+        return target(*args, **kwargs)
+
+
+def _expose(module_path: str, entry_point: str) -> ModuleType:
+    """Bind submodule *module_path* as a callable alias of *entry_point*.
+
+    The package attribute keeps pointing at the module object (so all of its
+    symbols stay reachable through it) and gains callability that forwards to
+    the module's own eponymous function.
+    """
+    module = sys.modules[module_path]
+    module.__class__ = _EntryPointModule  # type: ignore[assignment]
+    module.__entry_point__ = entry_point  # type: ignore[attr-defined]
+    globals()[module.__name__.rpartition(".")[2]] = module
+    return module
+
+
+for _path, _entry in (
+    ("openreltime.calibrate", "calibrate"),
+    ("openreltime.corrtest", "corrtest"),
+    ("openreltime.ddbd", "ddbd"),
+):
+    _expose(_path, _entry)
+del _path, _entry
 
 __all__ = [
     "__version__",

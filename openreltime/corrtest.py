@@ -130,10 +130,48 @@ def _rrf_rate_vectors(
 
 
 def _spearman(a: np.ndarray, b: np.ndarray) -> float:
+    """Spearman's rho, propagated as ``NaN`` when it is undefined.
+
+    A constant input leaves the coefficient undefined and
+    :func:`scipy.stats.spearmanr` answers ``NaN``.  Substituting ``0.0`` there
+    (the previous behaviour) fed a fabricated "no rate correlation" straight into
+    the fixed-coefficient logistic model, and on a tree carrying no rate
+    information that returned CorrScore ``0.9999999999852567`` with the band
+    "P-value < 0.001" - the strongest claim the model can make, from zero
+    information.  ``NaN`` is therefore returned untouched and each caller decides
+    what undefined means: :func:`corrtest` raises for its two *primary* features
+    (the sister-pair and the ancestor-descendant correlation), and logs loudly
+    while substituting ``0.0`` for the lag-2/lag-3 decay features, which are
+    undefined by construction on small trees because too few grandchild pairs
+    exist.
+    """
     rho = spearmanr(a, b).statistic
-    if rho is None or math.isnan(rho):
-        return 0.0
+    if rho is None:
+        return float("nan")
     return float(rho)
+
+
+def _is_nan(rho: float) -> bool:
+    """True when a Spearman coefficient came back undefined."""
+    try:
+        return math.isnan(float(rho))
+    except (TypeError, ValueError):  # pragma: no cover - spearmanr yields floats
+        return False
+
+
+def _require_defined(rho: float, feature: str) -> float:
+    """Raise when a *primary* CorrTest feature is undefined on this tree."""
+    if _is_nan(rho):
+        raise ValueError(
+            f"CorrTest cannot be evaluated: the {feature} Spearman correlation "
+            "is undefined because its input vector is constant. This happens "
+            "when the tree carries no rate variation to correlate - an all-zero "
+            "or otherwise degenerate branch-length tree - and forcing the "
+            "coefficient to 0 would let the fixed-coefficient logistic model "
+            "return a spurious CorrScore. Supply a tree with informative branch "
+            "lengths, or use rrf_times() directly."
+        )
+    return rho
 
 
 def corrtest(
@@ -158,13 +196,38 @@ def corrtest(
         Seed for the sister-pair resampling.
     anchor_node, anchor_time:
         When given (a node id and its absolute time), relative rates are
-        converted to absolute rates and their mean/SD reported.
+        converted to absolute rates and their mean/SD reported.  ``anchor_time``
+        must be strictly positive whenever ``anchor_node`` is given: it is the
+        age the whole rate vector is rescaled by, and anchoring at 0 would divide
+        every rate by zero and write ``Infinity``/``NaN`` into the report.
 
     Returns
     -------
     CorrTestResult
         CorrScore in [0, 1] and its P-value band.
+
+    Raises
+    ------
+    ValueError
+        When the tree carries no rate information to correlate: a tree of all-zero
+        branch lengths, fewer than three rate-bearing sister pairs, an undefined
+        (constant-input) sister or ancestor-descendant correlation, an
+        ``anchor_node`` without a positive ``anchor_time``, or a non-positive
+        ``anchor_node`` id.  Degenerate input *raises* rather than returning a
+        neutral score, because the logistic model has no "no information" output:
+        any score it returns on undefined input is an artefact of the fabricated
+        coefficient, not a statement about the tree.  The lag-2/lag-3 decay
+        features alone are not fatal - they are undefined on any small tree - and
+        are logged and set to 0 instead.
     """
+    total_blen = float(sum(float(n.blen or 0.0) for n in tree.walk()))
+    if total_blen <= 0.0:
+        raise ValueError(
+            "CorrTest received a tree with no branch-length information: the "
+            f"branch lengths sum to {total_blen:g}, so no evolutionary rate "
+            "exists to correlate. CorrScore would be an artefact of the "
+            "logistic transform, not a test result."
+        )
     node_ids, rates_arr, des1, des2 = _rrf_rate_vectors(tree)
     rates = np.array(rates_arr, dtype=float)
     rates[~np.isfinite(rates)] = 0.0
@@ -182,7 +245,7 @@ def corrtest(
             "tree has fewer than 3 rate-bearing sister pairs; CorrTest needs "
             "a larger tree"
         )
-    rho_s = _spearman(r1, r2)
+    rho_s = _require_defined(_spearman(r1, r2), "sister-lineage")
 
     if sister_resample:
         rng = np.random.default_rng(seed)
@@ -191,7 +254,23 @@ def corrtest(
             swap = rng.integers(0, 2, size=len(r1))
             r1s = np.concatenate([r1[swap == 0], r2[swap == 1]])
             r2s = np.concatenate([r2[swap == 0], r1[swap == 1]])
-            rhos.append(_spearman(r1s, r2s))
+            rho = _spearman(r1s, r2s)
+            if not _is_nan(rho):
+                rhos.append(rho)
+        if not rhos:
+            raise ValueError(
+                f"every one of the {int(sister_resample)} sister-resample "
+                "correlations is undefined (constant resampled vectors): the "
+                "tree carries no rate variation to correlate"
+            )
+        if len(rhos) < int(sister_resample):
+            logger.warning(
+                "%d of %d sister-resample correlations were undefined and are "
+                "excluded from the mean over the remaining %d",
+                int(sister_resample) - len(rhos),
+                int(sister_resample),
+                len(rhos),
+            )
         rho_s = float(np.mean(rhos))
 
     # ---- ancestor-descendant correlation -----------------------------------
@@ -225,7 +304,12 @@ def corrtest(
             des_rates.append(rates[id_index[slot]])
 
     def _filtered_correlation(
-        a: list[float], b: list[float], has_parent: list[bool]
+        a: list[float],
+        b: list[float],
+        has_parent: list[bool],
+        *,
+        feature: str,
+        strict: bool,
     ) -> float:
         # corrtest.R: drop entries whose start node has no parent (the root),
         # then drop the zero-rate placeholders left by the guard
@@ -233,10 +317,30 @@ def corrtest(
         rd = [y for x, y, k in zip(a, b, has_parent) if k and x != 0 and y != 0]
         if not ra:
             return 0.0
-        return _spearman(np.array(ra), np.array(rd))
+        rho = _spearman(np.array(ra), np.array(rd))
+        if _is_nan(rho):
+            if strict:
+                raise ValueError(
+                    f"CorrTest cannot be evaluated: the {feature} Spearman "
+                    "correlation is undefined (constant input vector) on this "
+                    "tree; see the function docstring for the degenerate-input "
+                    "policy"
+                )
+            logger.warning(
+                "the %s correlation is undefined on this tree (constant input "
+                "over %d pair(s), the usual shortage of deeper node pairs on a "
+                "small tree); the decay feature is set to 0 and the CorrScore "
+                "rests on the sister and ancestor-descendant features alone",
+                feature,
+                len(ra),
+            )
+            return 0.0
+        return float(rho)
 
     has_parent = [k != 0 for k in anc_nodes]
-    rho_ad = _filtered_correlation(anc_rates, des_rates, has_parent)
+    rho_ad = _filtered_correlation(
+        anc_rates, des_rates, has_parent, feature="ancestor-descendant", strict=True
+    )
     rho_ad_all = [rho_ad]
 
     for lag in (2, 3):
@@ -270,7 +374,13 @@ def corrtest(
             rho_ad_all.append(0.0)
             continue
         rho_ad_all.append(
-            _filtered_correlation(lag_anc, lag_des, lag_has_parent)
+            _filtered_correlation(
+                lag_anc,
+                lag_des,
+                lag_has_parent,
+                feature=f"lag-{lag} ancestor-descendant",
+                strict=False,
+            )
         )
 
     if rho_ad_all[0] == 0:
@@ -302,12 +412,25 @@ def corrtest(
                 f"anchor node id must be a positive internal-node id, got "
                 f"{anchor_node}"
             )
+        if anchor_time <= 0:
+            raise ValueError(
+                f"anchor_time must be > 0 when anchor_node is given, got "
+                f"{anchor_time!r}: the anchor's absolute age is the divisor that "
+                "turns the RRF relative rates into rates per unit time "
+                "(corrtest rescales by anchor_time / relative_time), so anchoring "
+                "at 0 divides every rate by zero and writes Infinity/NaN into the "
+                "report. Note that ddbd() defaults anchor_time to 1.0 while "
+                "corrtest() defaults it to 0.0: pass --anchor-time explicitly "
+                "here, or drop --anchor-node."
+            )
         engine = RrfEngine(tree, compute_times=True)
         engine.run()
         tvals = np.array(
             [engine.row(n).t7a or 0.0 for n in tree.walk() if not n.is_tip()]
         )
-        rel_time = tvals / tvals.max()
+        # the same zero guard calibrate.py uses: an all-zero tree would otherwise
+        # divide by max() == 0 and emit a RuntimeWarning plus finite garbage
+        rel_time = tvals / max(float(tvals.max()), 1e-300)
         rel_time[rel_time < 0] = 0.0
         # anchor node lookup: walk() is pre-order, so index by the node's
         # *position in the same array*, never by id arithmetic

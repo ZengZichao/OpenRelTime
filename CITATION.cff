@@ -10,9 +10,15 @@ authors:
   - name: "王寅炤"
     email: "wyz@sjtu.edu.cn"
     orcid: "https://orcid.org/0000-0001-8715-1386"
-version: 0.1.0
-doi: "10.5281/zenodo.23053146"
-date-released: "2026-09-29"
+version: 0.1.1
+# The DOI below is the engine's *concept* DOI: it resolves to the version-agnostic
+# record for the software as a whole and is therefore correct for 0.1.1 today.
+# 10.5281/zenodo.23053146 is the v0.1.0 *version* record and must not be paired
+# with this version.  A Zenodo version record for 0.1.1 has to be minted at
+# release time (reserve-it-from-the-repository-tag step); until that exists this
+# field intentionally points at the concept DOI.  See README.md's citation block.
+doi: "10.5281/zenodo.23053145"
+date-released: "2026-10-08"
 repository-code: "https://github.com/ZengZichao/OpenRelTime"
 license: GPL-3.0-or-later
 funding: >-

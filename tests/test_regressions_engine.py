@@ -52,6 +52,7 @@ def _example_tree() -> PhyloNode:
 # Node ids follow ape's cladewise convention: preorder, root = n + 1
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G1")
 def test_node_ids_are_ape_cladewise() -> None:
     tree = _simple_tree()  # 5 tips, 4 internal nodes
     tree.assign_ids()
@@ -68,6 +69,7 @@ def test_node_ids_are_ape_cladewise() -> None:
                 assert child.node_id > node.node_id
 
 
+@pytest.mark.gate("G1")
 def test_node_table_ids_ascending_for_internals() -> None:
     from openreltime.report import node_table
 
@@ -81,6 +83,7 @@ def test_node_table_ids_ascending_for_internals() -> None:
 # The rate-ratio guard substitutes the nearest clean ancestor, not the root
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G1")
 def test_rate_ratio_guard_picks_nearest_clean_ancestor() -> None:
     from openreltime.rrf import RrfEngine
 
@@ -117,6 +120,7 @@ def test_rate_ratio_guard_picks_nearest_clean_ancestor() -> None:
 # CorrTest anchoring takes the time of the requested node
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G6")
 def test_corrtest_anchor_root_scale_is_one() -> None:
     tree = _simple_tree()
     tree.assign_ids()
@@ -125,6 +129,7 @@ def test_corrtest_anchor_root_scale_is_one() -> None:
     assert res.anchor["scale.factor"] == pytest.approx(1.0, rel=1e-9)
 
 
+@pytest.mark.gate("G6")
 def test_corrtest_anchor_specific_node_scale() -> None:
     tree = _simple_tree()
     tree.assign_ids()
@@ -137,6 +142,7 @@ def test_corrtest_anchor_specific_node_scale() -> None:
     assert res.anchor["scale.factor"] == pytest.approx(expected_sf, rel=1e-9)
 
 
+@pytest.mark.gate("G6")
 def test_corrtest_anchor_zero_rejected() -> None:
     tree = _simple_tree()
     with pytest.raises(ValueError):
@@ -147,6 +153,7 @@ def test_corrtest_anchor_zero_rejected() -> None:
 # The CI finite differences act on a copy, never on the caller's tree
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G7")
 def test_ci_matches_reference_finite_difference_and_keeps_tree() -> None:
     tree = _simple_tree()
     tree.assign_ids()
@@ -184,6 +191,7 @@ def test_ci_matches_reference_finite_difference_and_keeps_tree() -> None:
 # ddbd reports sampling_frac the way R3F does: fitted free, value replaced
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G8")
 def test_ddbd_sampling_frac_is_reported_not_constrained() -> None:
     """R3F semantics: rho stays free in the fit; only the reported value changes.
 
@@ -212,6 +220,7 @@ def test_ddbd_sampling_frac_is_reported_not_constrained() -> None:
     )
 
 
+@pytest.mark.gate("G8")
 def test_ddbd_sampling_frac_validated() -> None:
     tree = _simple_tree()
     with pytest.raises(ValueError):
@@ -224,6 +233,7 @@ def test_ddbd_sampling_frac_validated() -> None:
 # An empty calibration list must raise, not pass silently
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G7")
 def test_calibrate_with_empty_list_raises() -> None:
     tree = _simple_tree()
     times = rrf_times(tree)
@@ -235,6 +245,7 @@ def test_calibrate_with_empty_list_raises() -> None:
 # calibrate supports a progress callback and cancellation
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G7")
 def test_calibrate_progress_callback_and_cancel() -> None:
     tree = _simple_tree()
     times = rrf_times(tree, normalize=True)
@@ -257,6 +268,7 @@ def test_calibrate_progress_callback_and_cancel() -> None:
 # report.json merges per analysis instead of overwriting; legacy reads stay compatible
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G3")
 def test_report_json_merges_across_analyses(tmp_path: Path) -> None:
     tree = _simple_tree()
     prefix = str(tmp_path / "x")
@@ -284,6 +296,7 @@ def test_report_json_merges_across_analyses(tmp_path: Path) -> None:
 # CLI options round-trip through the recorded report
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G3")
 def test_rates_times_cli_mean_option_reaches_the_engine(tmp_path) -> None:
     """``--mean`` must change the numbers, not merely be accepted.
 
@@ -335,6 +348,7 @@ def test_rates_times_cli_mean_option_reaches_the_engine(tmp_path) -> None:
             assert float(mine[nid]) == pytest.approx(value, abs=1e-12)
 
 
+@pytest.mark.gate("G3")
 def test_tree2table_cli_accepts_fmt() -> None:
     from openreltime.cli import cli
 
@@ -344,6 +358,7 @@ def test_tree2table_cli_accepts_fmt() -> None:
     assert "--fmt" in fmt_opts
 
 
+@pytest.mark.gate("G3")
 def test_ci_cli_restores_effective_params(tmp_path: Path) -> None:
     """calibrate records input_fmt/resolve and ci reads them back."""
     from openreltime.report import write_report
@@ -379,6 +394,7 @@ def _pectinate(n: int) -> str:
     return text + ";"
 
 
+@pytest.mark.gate("G1")
 def test_deep_tree_full_pipeline() -> None:
     n = 1200  # 远超默认递归限
     tree = parse_newick(_pectinate(n))
@@ -393,6 +409,7 @@ def test_deep_tree_full_pipeline() -> None:
     assert "Time" in frame.columns
 
 
+@pytest.mark.gate("G1")
 def test_copy_is_deep_safe() -> None:
     tree = parse_newick(_pectinate(1200))
     clone = tree.copy()
@@ -403,6 +420,7 @@ def test_copy_is_deep_safe() -> None:
 # quoted-label round trip and NEXUS escaping
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G2c")
 def test_quoted_label_roundtrip() -> None:
     label = "Escherichia (K-12), strain 'X'"
     tree = parse_newick(f"((A:0.1,'B, (K-12)':0.2):0.3,'{label.replace(chr(39), chr(39) * 2)}':0.4):0.0;")
@@ -411,6 +429,7 @@ def test_quoted_label_roundtrip() -> None:
     assert reread.tip_labels() == ["A", "B, (K-12)", label]
 
 
+@pytest.mark.gate("G2c")
 def test_nexus_taxlabels_are_escaped(tmp_path: Path) -> None:
     tree = parse_newick("((A:0.1,'B, C':0.2):0.3,D:0.4):0.0;")
     nexus = write_nexus(tree)
@@ -426,6 +445,7 @@ def test_nexus_taxlabels_are_escaped(tmp_path: Path) -> None:
 # external-process arguments are checked against a shell-metacharacter blacklist
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G4")
 def test_validate_tokens_allows_spaces_and_cjk() -> None:
     from openreltime._external import validate_tokens
 
@@ -434,6 +454,7 @@ def test_validate_tokens_allows_spaces_and_cjk() -> None:
     validate_tokens("-m", "GTR+G")
 
 
+@pytest.mark.gate("G4")
 def test_validate_tokens_rejects_metacharacters() -> None:
     from openreltime._external import validate_tokens
 
@@ -448,6 +469,7 @@ def test_validate_tokens_rejects_metacharacters() -> None:
 # no division by zero when rho_ad is 0
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G6")
 def test_corrtest_zero_rho_ad_does_not_crash(monkeypatch: pytest.MonkeyPatch) -> None:
     import importlib
 
@@ -465,6 +487,7 @@ def test_corrtest_zero_rho_ad_does_not_crash(monkeypatch: pytest.MonkeyPatch) ->
 # Result.write honours every flag combination
 # ---------------------------------------------------------------------------
 
+@pytest.mark.gate("G1")
 def test_time_result_write_flags(tmp_path: Path) -> None:
     tree = _simple_tree()
     times = rrf_times(tree)

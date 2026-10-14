@@ -55,12 +55,14 @@ def test_calibrate_bounds_cli(run_cli, tmp_out, read_report, hard_bounds_cals):
     assert report["parameters"]["mean"] == "geometric"
 
 
-def test_calibrate_effective_cli(run_cli, tmp_out, read_report):
+def test_calibrate_effective_cli(
+    run_cli, tmp_out, read_report, effective_calibrations
+):
     """Effective-bounds calibration samples densities and writes extra output."""
     run_cli(
         "calibrate",
         "-i", str(TREE),
-        "-c", str(CALIBRATIONS),
+        "-c", str(effective_calibrations),
         "--outgroup", OUTGROUP_STR,
         "--method", "effective",
         "--n-effective", "5000",
@@ -79,6 +81,33 @@ def test_calibrate_effective_cli(run_cli, tmp_out, read_report):
     assert report["parameters"]["method"] == "effective"
     assert report["parameters"]["n_effective"] == 5000
     assert report["parameters"]["seed"] == 42
+
+
+def test_calibrate_effective_rejects_the_format_demo(run_cli_raw, tmp_out):
+    """The shipped format-illustration table is rejected, not solved.
+
+    ``example_calibrations.tsv`` carries placeholder bounds that cannot be made
+    jointly true by any rate rescaling of the tree.  Before the post-loop
+    time-order check was added, ``--method effective`` on it returned a
+    solution with a node at -3,999 Ma, four parent-child inversions and four
+    ``NaN`` implied rates, reported only as warnings; the CLI must now fail
+    with a message that names the offending nodes and writes nothing.
+    """
+    proc = run_cli_raw(
+        "calibrate",
+        "-i", str(TREE),
+        "-c", str(CALIBRATIONS),
+        "--outgroup", OUTGROUP_STR,
+        "--method", "effective",
+        "--n-effective", "200",
+        "--seed", "20260906",
+        "-o", "cal_eff_bad",
+    )
+    assert proc.returncode != 0
+    err = proc.stderr.lower()
+    assert "not nested in the tree" in err
+    assert "307" in proc.stderr  # the negative-age node is named
+    assert not (tmp_out / "cal_eff_bad_calibrated.csv").exists()
 
 
 def test_ci_default(run_cli, tmp_out, read_report, hard_bounds_cals):

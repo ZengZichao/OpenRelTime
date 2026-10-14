@@ -2,7 +2,7 @@
 
 **语言：中文** · [English](usage-en.md)
 
-版本：v0.1.0 · 环境：Python ≥ 3.10 · 许可：GPL-3.0-or-later
+版本：v0.1.1 · 环境：Python ≥ 3.10 · 许可：GPL-3.0-or-later
 
 本说明面向日常使用，覆盖安装、输入准备、全部子命令、校正文件格式、输出
 文件清单、独立发行的桌面图形界面指引、常见问题与故障排查。全部可选参数的语义见
@@ -16,7 +16,7 @@
 ### 1.1 从源码检出或 Release wheel 安装
 
 > **分发方式。** 本版本以源码，以及挂在
-> [v0.1.0 Release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.0)
+> [v0.1.1 Release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1)
 > 上的 sdist 与 wheel 分发；目前未发布到包索引，发布后会在此处公告。
 
 从检出安装：
@@ -30,7 +30,7 @@ python -m pip install --editable ".[dev,plot]"   # 核心 + 绘图 + 开发工�
 不必克隆，直接从 Release 装 wheel 也可以——`[plot]` 会带上 matplotlib：
 
 ```bash
-python -m pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl"
+python -m pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl"
 ```
 
 `plot`（matplotlib 绘图）与 `dev`（pytest、pytest-cov、ruff、mypy，面向开发者）
@@ -166,9 +166,11 @@ openreltime calibrate -i tree.nwk -c calibrations.tsv --outgroup og.txt \
     --method effective --n-effective 10000 --seed 42 -o mam_cal
 ```
 
-- `--method bounds`（默认）：`min` 与 `max` 硬边界；全局因子 f 取可行域中点，
-  无法满足时按谱系速率缩放迭代调整（上限 100 次），仍不可行则报错并列出冲突
-  节点；
+- `--method bounds`（默认）：`min` 与 `max` 硬边界；全局因子 f 取可行域中点，而
+  只给下界或只给上界的校正表直接取那条有限边界（节点恰好落在该边界上，且与你使用的
+  时间单位无关）；无法满足时按谱系速率缩放迭代调整（上限 100 次），仍不可行则报错并
+  列出冲突节点；若收敛解仍然存在负年龄、或后代比祖先更老，软件会报错并点名这些节点，
+  而不是只留下警告；
 - `--method effective`：密度校正按 msz236 抽样转换，`--n-effective` 控制复制数
   （默认 10,000），输出有效边界表 `<prefix>_effective_bounds.csv` 与各节点经验
   分位区间。只给密度而不给硬边界的行在 `bounds` 下不构成任何约束，解析阶段会
@@ -385,13 +387,13 @@ cal2  = ort.calibrate(times, cals, taxon_table=table_map)
 
 ```bash
 pip install \
-  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.0/openreltime-0.1.0-py3-none-any.whl" \
-  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.0/openreltime_studio-0.1.0-py3-none-any.whl"
+  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl" \
+  "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.1/openreltime_studio-0.1.1-py3-none-any.whl"
 openreltime-studio
 ```
 
 Apple Silicon 上还可以直接取 Studio 的 Release 附件
-`OpenRelTimeStudio-v0.1.0-macOS-arm64.zip`，解压即用，完全不需要 Python。
+`OpenRelTimeStudio-v0.1.1-macOS-arm64.zip`，解压即用，完全不需要 Python。
 
 * 主页：<https://github.com/ZengZichao/OpenRelTime-Studio>
 * 界面能力：完整的中英双语界面（「视图 ▸ 语言」即时切换）、浅色/深色两套主题
@@ -445,9 +447,10 @@ bounds）、msz014（CorrTest）与 btab307（ddBD）。
 | `outgroup [...] is not a complete clade` | 多末端外群的 MRCA 下混有未指定末端（非完整簇）；补全外群成员，或改用 `--outgroup-check warn` 降级为警告 |
 | `outgroup taxon [...] not found in tree (as tip or group)` | 外群名称既不是末端名也不是类群名；检查拼写或提供 `--taxon-table` |
 | `conflicting calibration constraints` | 校正节点互相冲突（如子节点边界早于父节点），放宽边界 |
+| `the repair loop converged on node ages that are not nested in the tree` | 这棵树无论怎样缩放速率都无法容纳所给边界：收敛解出现负年龄，或后代比祖先更老，报错信息会点名这些节点 id。随包的 `data/examples/example_calibrations.tsv` 在 `--method effective` 下就是一个实例；请改用 `example_calibrations_feasible.tsv`，或放宽边界 |
 | `calibration constraints could not be satisfied within 100 iterations` | 同上，见报错中的节点列表 |
 | `a calibration needs at least one finite bound … but neither was given` | 该行的 `min_bound` 与 `max_bound` 都是 `.`；补上硬边界，或改用 `--method effective` 处理只给密度的行 |
-| `Under method='bounds' a density does not count as a bound` | `bounds` 下给了纯密度校正；改用 `--method effective` |
+| `method='bounds' cannot use density-only calibrations` | `bounds` 下给了纯密度校正；给该行补上 `min_bound`/`max_bound`，或改用 `--method effective` |
 | `no 'calibrate' block in <prefix>_report.json` | `ci -c` 拿到的是一个从未跑过 `calibrate` 的前缀；用同样的 `-o` 先跑 `calibrate` |
 | `cannot locate the original tree` | 树文件在 `calibrate` 之后移动了；用相同的 `-i` 与 `-o` 重跑 `calibrate` 以记录 `tree_file` |
 | `group '…' not found in …; available: …` | 该名称既不在 `--taxon-table` 中，也不是自动识别出的前缀；报错会列出可用名称 |
@@ -465,9 +468,11 @@ bounds）、msz014（CorrTest）与 btab307（ddBD）。
 - 测试：在仓库根目录运行 `python -m pytest`，收集范围是引擎测试
   （`tests/`）。桌面前端的自带测试随独立产品 `OpenRelTime-Studio` 一起维护（见
   §7）；
-- 持续集成：`.github/workflows/ci.yml` 在 Ubuntu 与 macOS 上以 Python
-  3.10、3.11、3.12 和 3.13 运行上述测试套件。Windows 是声明的支持目标，CI 不在该平台
-  运行；外部工具链（`blb` 的 IQ-TREE、`megacc` 的 MEGA-CC）不在工作流中安装——
-  已测与仅声明的对照见 `docs/validation-zh.md`；
-- 随机性（有效边界、BLB、sister 重抽样）一律经 `--seed` 注入并写入
-  `_report.json`。
+- 持续集成：`.github/workflows/ci.yml` 在 Ubuntu 上以 Python 3.10、3.11、3.12 和
+  3.13 运行上述测试套件，在 macOS 与 Windows（`windows-latest`，引擎套件加端到端
+  套件）上以 Python 3.13 运行。Windows 作业自 0.1.1 加入，首次运行在下一次 push；
+  外部工具链（`blb` 的 IQ-TREE、`megacc` 的 MEGA-CC）在**任何**平台上都不由工作流
+  安装——已测与仅声明的对照见 `docs/validation-zh.md`；
+- 随机性（多分叉二叉化、有效边界、BLB、sister 重抽样）一律经 `--seed` 注入并写入
+  `_report.json`。只有多分叉二叉化用的是标准库 `random.Random` 而非 numpy，且
+  `monophyly` 根本没有报告块可记——详见 `docs/parameters-zh.md`。

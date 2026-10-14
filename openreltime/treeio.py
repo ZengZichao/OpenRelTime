@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Optional, Sequence
 
+from . import _constants as C
 from .taxonomy import resolve_taxa_tokens
 from .tree import PhyloNode, contract_unary_nodes, invalidate_caches
 
@@ -535,10 +536,10 @@ def _validate(tree: PhyloNode, resolve_polytomy: str, seed: Optional[int]) -> No
                 f"negative branch length at node {node.label!r}; check the input tree"
             )
     tips = tree.tips()
-    if len(tips) < 3:
+    if len(tips) < C.MIN_INGROUP_TIPS:
         raise ValueError(
-            f"tree has {len(tips)} tips; at least 3 are required "
-            "(a 2-taxon ingroup has no resolvable rate solution)"
+            f"tree has {len(tips)} tips; at least {C.MIN_INGROUP_TIPS} are "
+            "required (a 2-taxon ingroup has no resolvable rate solution)"
         )
     # A node that was read or built as an internal node must not survive as a
     # leaf: after outgroup removal such a leftover ("ghost tip") would be
@@ -572,7 +573,7 @@ def _validate(tree: PhyloNode, resolve_polytomy: str, seed: Optional[int]) -> No
     n_nodes = sum(1 for _ in tree.walk())
     n_edges = n_nodes - 1
     zero = sum(1 for n in tree.walk() if not n.is_root() and n.blen == 0.0)
-    if n_edges and zero / n_edges >= 0.10:
+    if n_edges and zero / n_edges >= C.ZERO_BRLEN_WARN_FRACTION:
         logger.warning(
             "there are too many zero-length branches (>= %.0f%%) in the tree; "
             "rates and node times on those branches may not be reliable",
@@ -712,9 +713,10 @@ def root_outgroup(
     invalidate_caches(tree)
     tree = contract_unary_nodes(tree, discard_root_edge=True)
 
-    if tree.n_tips() < 3:
+    if tree.n_tips() < C.MIN_INGROUP_TIPS:
         raise ValueError(
             f"ingroup has {tree.n_tips()} tips after outgroup removal; "
-            "at least 3 are required (add taxa or adjust the outgroup)"
+            f"at least {C.MIN_INGROUP_TIPS} are required "
+            "(add taxa or adjust the outgroup)"
         )
     return tree

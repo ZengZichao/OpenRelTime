@@ -18,8 +18,18 @@ Implements the delta method of
   time function are taken numerically, which is algebraically identical to
   the recursion under the no-covariance assumption and stays valid for
   arbitrary calibrated paths (see docs/methods.md and ADR-005, indexed in docs/adr/README.md).
-* CIs use the final (calibrated) rates and are truncated at the imposed
-  hard calibration bounds.
+* CIs use the *relative RRF lineage rates* ``r_j`` (msz236 eqs 1-4) that
+  ``TimeResult.rates``/``CalibratedResult.rates`` carry - i.e. the rates from
+  before the absolute-time conversion, not the calibrated per-time-unit rates in
+  ``CalibratedResult.implied_rates``.  This is deliberate: ``Vobs(R)`` is a
+  variance of rates, and the RRF rates are scale-invariant (multiplying every
+  calibration age by a constant leaves them unchanged), so the global time
+  factor cancels out of the rate-heterogeneity term and the interval widens or
+  narrows only with the branch lengths.  ``implied_rates`` would instead make
+  ``Vobs(R)`` shrink as ``1/f**2`` and tie the interval width to the arbitrary
+  choice of calibration unit.  The interval itself is reported on the
+  *calibrated* (absolute) time scale, and is truncated at the imposed hard
+  calibration bounds.
 
 Two scale/consistency rules are enforced because the printed equations mix
 them:
@@ -65,6 +75,14 @@ __all__ = ["confidence_interval"]
 
 #: relative tolerance used to decide that a node age sits on a hard bound
 _PIN_TOL = 1e-9
+
+#: Plausible range, in substitutions per site, of the largest branch length of
+#: a tree the delta method of msz236 was derived for.  Outside it the interval
+#: is still computed -- the estimator is the published one -- but it is almost
+#: certainly being fed branch lengths in some other unit; see
+#: :func:`_warn_if_off_scale`.
+_BRANCH_LENGTH_LOW = 0.02
+_BRANCH_LENGTH_HIGH = 5.0
 
 
 @dataclass
@@ -282,6 +300,37 @@ def _free_se_array(
     return np.sqrt(np.sum(derivs**2 * v_b[None, :], axis=1))
 
 
+def _warn_if_off_scale(blens: np.ndarray) -> None:
+    """Log once when the branch lengths look like something other than subs/site.
+
+    This is a units heads-up, not a correction.  msz236 eq (14) distributes
+    ``RV(R)`` over branches by the *ratio* ``b_j^2 / sum(b^2)``, which is scale
+    free, but ``vS(b) = b / L`` and the derivatives ``dt_i/db_j`` are not, so the
+    absolute interval width depends on the unit the caller supplied: the same
+    tree given in substitutions per 100 sites instead of per site is qualified
+    differently, silently.  The behaviour is inherited from the cited equation
+    and the estimator is deliberately left alone; what is unsafe is saying
+    nothing, so a tree whose longest branch falls outside
+    :data:`_BRANCH_LENGTH_LOW`--:data:`_BRANCH_LENGTH_HIGH` gets one warning
+    pointing at the documented unit rather than a plausible-looking number.
+    """
+    if not blens.size:  # pragma: no cover - a tree always has edges here
+        return
+    longest = float(blens.max())
+    if _BRANCH_LENGTH_LOW <= longest <= _BRANCH_LENGTH_HIGH:
+        return
+    logger.warning(
+        "longest branch length is %.4g, outside the %.3g-%.3g substitutions "
+        "per site the delta method of msz236 assumes; the interval width of "
+        "eqs (7)-(14) depends on the unit of the input branch lengths, so "
+        "convert the tree to substitutions per site before trusting the "
+        "absolute half-widths (the fractional width is unit-free)",
+        longest,
+        _BRANCH_LENGTH_LOW,
+        _BRANCH_LENGTH_HIGH,
+    )
+
+
 def confidence_interval(
     calibrated: CalibratedResult,
     *,
@@ -328,6 +377,7 @@ def confidence_interval(
     edge_nodes = [n for n in tree.walk() if not n.is_root()]
     blens = np.array([float(n.blen or 0.0) for n in edge_nodes])
     n_branches = blens.size  # N of msz236 eqs (7)-(14)
+    _warn_if_off_scale(blens)
     if outgroup_check is None:
         outgroup_check = (calibrated.params or {}).get("outgroup_check")
 
@@ -444,10 +494,15 @@ def confidence_interval(
         if rec.max_bound is not None and upper[idx] > rec.max_bound:
             upper[idx] = rec.max_bound
             truncated = True
-        if lower[idx] > t or upper[idx] < t:
+        if lower[idx] > t + _PIN_TOL * scale or upper[idx] < t - _PIN_TOL * scale:
             # the solver could not reach this constraint (it records a warning);
             # an inverted interval must not be printed, and the node is not
-            # qualified by eq (7) either
+            # qualified by eq (7) either.  The slack is the same `_PIN_TOL` the
+            # pinned test below uses: without it a node the solver *did* place
+            # on its bound -- one ULP away, which `abs(t - bound) <= _PIN_TOL`
+            # then calls "on the bound" -- was labelled "constraint not
+            # satisfied" and that false sentence was written into the user-facing
+            # `notes` column of the CI CSV.
             lower[idx] = min(lower[idx], t)
             upper[idx] = max(upper[idx], t)
             notes[idx] = "calibration constraint not satisfied by the solver; "

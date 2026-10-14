@@ -1,0 +1,225 @@
+{
+ "generated_by": "附件图S3-置信区间图.py",
+ "openreltime_version": "0.1.0",
+ "seed": 20260906,
+ "n_effective": 10000,
+ "normalize": true,
+ "note_on_disclosure": "Disclosure: the first version of this figure drew panel (a) with 10,000 effective-bounds replicates but panels (b) and (c) with 2,000, and did not state that normalize=True was in force. Every number in this file is now produced under one setting -- n_effective = 10,000, normalize = true, seed = 20260906 -- recorded in the keys above.",
+ "crown_scenarios": [
+  {
+   "mid_ma": 72.5,
+   "tag": "65-80"
+  },
+  {
+   "mid_ma": 87.5,
+   "tag": "80-95"
+  },
+  {
+   "mid_ma": 97.5,
+   "tag": "90-105"
+  },
+  {
+   "mid_ma": 107.5,
+   "tag": "100-115"
+  }
+ ],
+ "relative_times_normalized": {
+  "Homo sapiens - Pan troglodytes": 0.05731662804585477,
+  "Homo sapiens - Gorilla gorilla": 0.08237494460077574,
+  "Homo sapiens - Pongo abelii": 0.14741530956434534,
+  "Homo sapiens - Mus musculus": 0.5704922585336855,
+  "Mus musculus - Rattus norvegicus": 0.15144092438279055,
+  "Loxodonta africana - Elephas maximus": 0.027662080165763714,
+  "Dasypus novemcinctus - Choloepus didactylus": 0.4872724562965497,
+  "Ursus maritimus - Ursus arctos": 0.014041032939918131,
+  "Balaenoptera musculus - Megaptera novaeangliae": 0.07438833073615504,
+  "Tursiops truncatus - Delphinus capensis": 0.009829625365915142,
+  "Sus scrofa - Bos taurus": 0.4126993069712439,
+  "Theria crown (ingroup root)": 1.0
+ },
+ "effective_bounds": [
+  {
+   "node": "Homo-Pan",
+   "node_id": 371,
+   "eff_min": 5.260461197123715,
+   "eff_max": 11.59921435431757,
+   "point": 11.599214354317567,
+   "on_lower_bound": false,
+   "on_upper_bound": true,
+   "inside_effective": true,
+   "density": "exponential",
+   "density_params": {
+    "offset": 5.0,
+    "mean": 1.5
+   }
+  },
+  {
+   "node": "Elephas-Loxodonta",
+   "node_id": 312,
+   "eff_min": 60.23792054314585,
+   "eff_max": 95.67363306094632,
+   "point": 60.237920543145776,
+   "on_lower_bound": true,
+   "on_upper_bound": false,
+   "inside_effective": true,
+   "density": "exponential",
+   "density_params": {
+    "offset": 60.0,
+    "mean": 20.0
+   }
+  },
+  {
+   "node": "Dasypus-Choloepus",
+   "node_id": 305,
+   "eff_min": 75.58811461227324,
+   "eff_max": 104.5657348300099,
+   "point": 104.56573483000989,
+   "on_lower_bound": false,
+   "on_upper_bound": true,
+   "inside_effective": true,
+   "density": "uniform",
+   "density_params": {
+    "min": 70.0,
+    "max": 105.0
+   }
+  },
+  {
+   "node": "Homo-Pan (uniform control)",
+   "node_id": 371,
+   "density": "uniform",
+   "density_params": {
+    "min": 5.0,
+    "max": 12.0
+   },
+   "density_quantile_2p5_97p5": [
+    5.175,
+    11.825
+   ],
+   "eff_min": 5.754184404088146,
+   "eff_max": 11.25062059418502,
+   "point": 8.502402499136583,
+   "on_lower_bound": false,
+   "on_upper_bound": false,
+   "inside_effective": true,
+   "strictly_interior": true,
+   "role": "control_jointly_feasible"
+  }
+ ],
+ "density_support_2p5_97p5": {
+  "Homo-Pan": [
+   5.037976711976435,
+   10.533319181170903
+  ],
+  "Elephas-Loxodonta": [
+   60.5063561596858,
+   133.77758908227872
+  ],
+  "Dasypus-Choloepus": [
+   70.875,
+   104.125
+  ],
+  "Homo-Pan (uniform control)": [
+   5.175,
+   11.825
+  ]
+ },
+ "sensitivity": {
+  "65-80": {
+   "Homo sapiens - Pan troglodytes": 4.155455533324471,
+   "Homo sapiens - Gorilla gorilla": 5.9721834835562415,
+   "Homo sapiens - Pongo abelii": 10.687609943415037,
+   "Homo sapiens - Mus musculus": 41.360688743692194,
+   "Mus musculus - Rattus norvegicus": 10.979467017752315,
+   "Loxodonta africana - Elephas maximus": 2.0055008120178694,
+   "Dasypus novemcinctus - Choloepus didactylus": 35.327253081499855,
+   "Ursus maritimus - Ursus arctos": 1.0179748881440644,
+   "Balaenoptera musculus - Megaptera novaeangliae": 5.393153978371241,
+   "Tursiops truncatus - Delphinus capensis": 0.7126478390288478,
+   "Sus scrofa - Bos taurus": 29.920699755415182,
+   "Theria crown (ingroup root)": 72.5
+  },
+  "80-95": {
+   "Homo sapiens - Pan troglodytes": 5.015204954012293,
+   "Homo sapiens - Gorilla gorilla": 7.207807652567877,
+   "Homo sapiens - Pongo abelii": 12.898839586880218,
+   "Homo sapiens - Mus musculus": 49.918072621697476,
+   "Mus musculus - Rattus norvegicus": 13.251080883494174,
+   "Loxodonta africana - Elephas maximus": 2.4204320145043248,
+   "Dasypus novemcinctus - Choloepus didactylus": 42.6363399259481,
+   "Ursus maritimus - Ursus arctos": 1.2285903822428366,
+   "Balaenoptera musculus - Megaptera novaeangliae": 6.508978939413566,
+   "Tursiops truncatus - Delphinus capensis": 0.8600922195175749,
+   "Sus scrofa - Bos taurus": 36.11118935998384,
+   "Theria crown (ingroup root)": 87.5
+  },
+  "90-105": {
+   "Homo sapiens - Pan troglodytes": 5.5883712344708405,
+   "Homo sapiens - Gorilla gorilla": 8.031557098575634,
+   "Homo sapiens - Pongo abelii": 14.372992682523671,
+   "Homo sapiens - Mus musculus": 55.62299520703433,
+   "Mus musculus - Rattus norvegicus": 14.76549012732208,
+   "Loxodonta africana - Elephas maximus": 2.6970528161619622,
+   "Dasypus novemcinctus - Choloepus didactylus": 47.509064488913594,
+   "Ursus maritimus - Ursus arctos": 1.3690007116420178,
+   "Balaenoptera musculus - Megaptera novaeangliae": 7.252862246775116,
+   "Tursiops truncatus - Delphinus capensis": 0.9583884731767264,
+   "Sus scrofa - Bos taurus": 40.23818242969628,
+   "Theria crown (ingroup root)": 97.5
+  },
+  "100-115": {
+   "Homo sapiens - Pan troglodytes": 6.161537514929388,
+   "Homo sapiens - Gorilla gorilla": 8.855306544583392,
+   "Homo sapiens - Pongo abelii": 15.847145778167125,
+   "Homo sapiens - Mus musculus": 61.32791779237119,
+   "Mus musculus - Rattus norvegicus": 16.279899371149984,
+   "Loxodonta africana - Elephas maximus": 2.9736736178195993,
+   "Dasypus novemcinctus - Choloepus didactylus": 52.38178905187909,
+   "Ursus maritimus - Ursus arctos": 1.5094110410411992,
+   "Balaenoptera musculus - Megaptera novaeangliae": 7.996745554136667,
+   "Tursiops truncatus - Delphinus capensis": 1.0566847268358777,
+   "Sus scrofa - Bos taurus": 44.36517549940872,
+   "Theria crown (ingroup root)": 107.5
+  }
+ },
+ "propagation_coefficients": {
+  "Homo sapiens - Pan troglodytes": 0.05731662804585476,
+  "Homo sapiens - Gorilla gorilla": 0.08237494460077577,
+  "Homo sapiens - Pongo abelii": 0.14741530956434534,
+  "Homo sapiens - Mus musculus": 0.5704922585336856,
+  "Mus musculus - Rattus norvegicus": 0.1514409243827905,
+  "Loxodonta africana - Elephas maximus": 0.027662080165763724,
+  "Dasypus novemcinctus - Choloepus didactylus": 0.48727245629654947,
+  "Ursus maritimus - Ursus arctos": 0.01404103293991813,
+  "Balaenoptera musculus - Megaptera novaeangliae": 0.07438833073615503,
+  "Tursiops truncatus - Delphinus capensis": 0.00982962536591514,
+  "Sus scrofa - Bos taurus": 0.4126993069712441
+ },
+ "example_calibration_consistency": {
+  "implied_global_time_factor": {
+   "Homo-Pan": 126.49034402721342,
+   "Elephas-Loxodonta": 2892.045700128254,
+   "Dasypus-Choloepus": 179.57099538322413
+  },
+  "spread_ratio": 22.86376657736066,
+  "tree_implied_ages_at_crown_97_5Ma": {
+   "Homo-Pan": 5.5883712344708405,
+   "Elephas-Loxodonta": 2.6970528161619622,
+   "Dasypus-Choloepus": 47.509064488913594
+  },
+  "conclusion": "the three rows of data/examples/example_calibrations.tsv imply global time factors differing by 23x, so they cannot all be satisfied by one factor and are not compatible with the age structure of the tree they ship with",
+  "representative_age": {
+   "Homo-Pan": {
+    "value_Ma": 7.25,
+    "rule": "uniform(TSV 6.0-8.5): midpoint"
+   },
+   "Elephas-Loxodonta": {
+    "value_Ma": 80.0,
+    "rule": "exponential(offset 60, mean 20): offset+mean"
+   },
+   "Dasypus-Choloepus": {
+    "value_Ma": 87.5,
+    "rule": "uniform(TSV 70-105): midpoint"
+   }
+  }
+ }
+}

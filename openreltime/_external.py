@@ -14,7 +14,9 @@ Security contract
   calibration parameters are parsed explicitly, never evaluated).
 
 Used by :mod:`openreltime.bootstrap` (IQ-TREE) and
-:mod:`openreltime.megacc` (MEGA-CC).
+:mod:`openreltime.megacc` (MEGA-CC).  :func:`probe_version` is the single
+version-banner site for both: no release is pinned in code or CI, so the banner
+each tool prints is recorded in that analysis' JSON report instead.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ import re
 import subprocess  # noqa: S404 - argv-list execution only, shell=False
 from pathlib import Path
 from shutil import which
+from typing import Any, Callable, Optional
 
 #: Characters that never belong in a command token.  With ``shell=False``
 #: they could not be interpolated anyway; the blacklist is defense in depth
@@ -74,3 +77,53 @@ def run_tool(argv: list[str], *, check: bool = True):
         capture_output=True,
         shell=False,
     )
+
+
+def probe_version(
+    executable: str,
+    *,
+    tool: str,
+    runner: Optional[Callable[..., Any]] = None,
+) -> tuple[str, list[str]]:
+    """Read *executable*'s ``--version`` banner; never let the probe break a run.
+
+    Both external-tool paths (IQ-TREE for BLB, ``megacc`` for the MEGA-CC
+    bridge) invoke whatever release the user has installed: no version is pinned
+    anywhere in the code or CI, so the only way a result can be attributed to an
+    inference program is to record what that program says about itself.  The
+    probe is advisory: ``check=False``, non-zero exits and empty output are
+    reported in the returned notes rather than raised, and the returned string
+    says outright when nothing could be read, so a report can never be mistaken
+    for "version recorded".
+
+    ``runner`` defaults to :func:`run_tool`; callers pass their module-level
+    binding so a test stub installed on that module intercepts the probe too.
+    """
+    run = runner or run_tool
+    try:
+        probe = run([executable, "--version"], check=False)
+    except (OSError, ValueError) as exc:  # pragma: no cover - defensive
+        return (
+            f"not recorded ({tool} could not be probed)",
+            [f"could not probe the {tool} version: {exc}"],
+        )
+    stdout = getattr(probe, "stdout", b"") or b""
+    stderr = getattr(probe, "stderr", b"") or b""
+    raw = (stdout or stderr).decode(errors="replace").strip()
+    code = getattr(probe, "returncode", "?")
+    if not raw:
+        return (
+            f"not recorded (empty {tool} --version output)",
+            [
+                f"the {tool} --version probe returned no output (exit code "
+                f"{code}); the release used is not recorded"
+            ],
+        )
+    first = raw.splitlines()[0].strip()
+    notes: list[str] = []
+    if code:
+        notes.append(
+            f"{tool} --version exited {code}; banner read as best effort: "
+            f"{first!r}"
+        )
+    return first, notes
