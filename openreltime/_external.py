@@ -30,8 +30,10 @@ from typing import Any, Callable, Optional
 #: Characters that never belong in a command token.  With ``shell=False``
 #: they could not be interpolated anyway; the blacklist is defense in depth
 #: against accidental misuse of :func:`run_tool` with assembled strings.
-#: Whitespace and non-ASCII characters are deliberately allowed (paths).
-_FORBIDDEN = re.compile(r"[;&|<>$`\\\"'\r\n\t]")
+#: Whitespace and non-ASCII characters are deliberately allowed (paths), and
+#: so is the backslash: Windows executables live under ``C:\...`` paths, and
+#: with ``shell=False`` a backslash in a list-mode token is inert data.
+_FORBIDDEN = re.compile(r"[;&|<>$`\"'\r\n\t]")
 
 
 def validate_tokens(*tokens: str) -> None:
@@ -42,7 +44,7 @@ def validate_tokens(*tokens: str) -> None:
         if _FORBIDDEN.search(token):
             raise ValueError(
                 f"refusing to run: argument {token!r} contains shell "
-                "metacharacters (one of ; & | < > $ ` \\ \" ' or a newline)"
+                "metacharacters (one of ; & | < > $ ` \" ' or a newline)"
             )
 
 

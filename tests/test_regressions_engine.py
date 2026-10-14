@@ -451,6 +451,7 @@ def test_validate_tokens_allows_spaces_and_cjk() -> None:
 
     validate_tokens("/Applications/My Tool/iqtree2")
     validate_tokens("/home/user/tools/iqtree")
+    validate_tokens(r"C:\Program Files\iqtree2.exe")  # Windows path
     validate_tokens("-m", "GTR+G")
 
 

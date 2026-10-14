@@ -125,11 +125,14 @@ python -m pytest            # 收集范围遵循 [tool.pytest.ini_options]：tes
   输入时，得到的区间 qualification 也不同。估计量是文献给出的那一个，刻意不做改
   动；`openreltime ci` 现在会在最长枝长落在 0.02–5 每位点置换之外时发出一次警告，
   但它打印的数字仍然随输入单位而变。
-* 在 Windows 上两条外部工具桥无法启动。`openreltime/_external.py` 的命令令牌黑名
-  单（`_FORBIDDEN`）会拒绝反斜杠与双引号，而它们在 Windows 路径里是合法字符，于是
-  `resolve_executable()` 拒绝 `which("iqtree")` 的返回值，`megacc` 的 `_safe_path()`
-  也拒绝任何绝对 `.mao`/树/输出路径。由于 CI 不安装这两个工具，即便有了 `test-windows`
-  作业，`blb` 与 `megacc` 在 Windows 上仍是**声明而非实证**；解析核心与 CLI 不受影响。
+* 0.1.1 之前，两条外部工具桥在 Windows 上无法启动：`openreltime/_external.py` 的
+  命令令牌黑名单（`_FORBIDDEN`）会拒绝反斜杠与双引号，而它们在 Windows 路径里是合法
+  字符，于是 `resolve_executable()` 拒绝 `which("iqtree")` 的返回值，`megacc` 的
+  `_safe_path()` 也拒绝任何绝对 `.mao`/树/输出路径。黑名单自 0.1.1 起不再包含反斜杠
+  （`shell=False` 下列表模式令牌中的反斜杠是惰性数据），Windows 路径现在可以通过校验；
+  单元门槛已固定 `C:\Program Files\...` 式令牌为合法。`blb` 与 `megacc` 在 Windows 上的
+  端到端运行仍为**声明而非实证**，因为 CI 不安装 IQ-TREE 与 MEGA-CC；解析核心与 CLI
+  由 `test-windows` 作业覆盖。
 
 ## 6. 已纳入回归门槛的校正与 CI 行为
 

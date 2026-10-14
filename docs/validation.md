@@ -139,14 +139,17 @@ These are restated here so that the green gates are not over-read:
   published one and is deliberately not altered; `openreltime ci` now warns once
   when the longest branch falls outside 0.02-5 substitutions per site, but the
   number it prints still depends on what you fed it.
-* On Windows the two external-tool bridges cannot start.  The command-token
-  blacklist of `openreltime/_external.py` (`_FORBIDDEN`) rejects backslashes and
-  double quotes, which are legitimate in a Windows path, so
-  `resolve_executable()` refuses the `which("iqtree")` result and `megacc`'s
-  `_safe_path()` refuses every absolute `.mao`/tree/output path.  `blb` and
-  `megacc` therefore remain *declared, not demonstrated* on Windows even after
-  the `test-windows` job, because CI installs neither tool; the analytical core
-  and the CLI are unaffected.
+* Before 0.1.1 the two external-tool bridges could not start on Windows: the
+  command-token blacklist of `openreltime/_external.py` (`_FORBIDDEN`) rejected
+  backslashes and double quotes, which are legitimate in a Windows path, so
+  `resolve_executable()` refused the `which("iqtree")` result and `megacc`'s
+  `_safe_path()` refused every absolute `.mao`/tree/output path.  The blacklist
+  no longer contains the backslash (with `shell=False` a backslash in a
+  list-mode token is inert data), so Windows paths now validate; a unit gate
+  pins a `C:\Program Files\...`-style token as acceptable.  End-to-end runs of
+  `blb` and `megacc` remain *declared, not demonstrated* on Windows, because CI
+  installs neither IQ-TREE nor MEGA-CC; the analytical core and the CLI are
+  exercised there by the `test-windows` job.
 
 ## 6. Calibration and CI behaviours under regression gate
 
