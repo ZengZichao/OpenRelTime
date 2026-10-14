@@ -36,6 +36,7 @@ import importlib
 import json
 import math
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -395,6 +396,11 @@ BLB_TREES = [
 BLB_VERSION_BANNER = "iqtree 2.3.1 macOS-13.6.1-arm64 " \
     "(3919f8ae5c 2024-05-05T07:39:31-04:00) [5.0.0]"
 
+#: Fake IQ-TREE executable passed to ``blb`` in these tests.  ``run_tool`` is
+#: monkeypatched, so the path only has to *resolve*; ``sys.executable`` exists
+#: on every platform, unlike a POSIX-only stub such as ``/bin/echo``.
+STUB_IQTREE = sys.executable
+
 
 @pytest.fixture()
 def blb_env(tmp_path, monkeypatch):
@@ -448,7 +454,7 @@ def test_blb_seeds_iqtree_and_guards_degenerate_replicates(blb_env, caplog) -> N
 
     with caplog.at_level(logging.INFO, logger="openreltime"):
         first = bootstrap.blb(
-            alignment, "/bin/echo", n_subsample=1, n_replicate=2, seed=7,
+            alignment, STUB_IQTREE, n_subsample=1, n_replicate=2, seed=7,
             workdir=tmp_path / "run-a",
         )
     seeds = [c[c.index("-seed") + 1] for c in calls]
@@ -457,7 +463,7 @@ def test_blb_seeds_iqtree_and_guards_degenerate_replicates(blb_env, caplog) -> N
 
     calls.clear()
     second = bootstrap.blb(
-        alignment, "/bin/echo", n_subsample=1, n_replicate=2, seed=7,
+        alignment, STUB_IQTREE, n_subsample=1, n_replicate=2, seed=7,
         workdir=tmp_path / "run-b",
     )
     assert [c[c.index("-seed") + 1] for c in calls] == seeds  # reproducible
@@ -465,7 +471,7 @@ def test_blb_seeds_iqtree_and_guards_degenerate_replicates(blb_env, caplog) -> N
 
     calls.clear()
     bootstrap.blb(
-        alignment, "/bin/echo", n_subsample=1, n_replicate=1, seed=7,
+        alignment, STUB_IQTREE, n_subsample=1, n_replicate=1, seed=7,
         iqtree_args=["-m", "GTR+G", "-seed", "99"], workdir=tmp_path / "run-c",
     )
     assert sum(c.count("-seed") for c in calls) == 1  # the user's -seed wins
@@ -475,7 +481,7 @@ def test_blb_seeds_iqtree_and_guards_degenerate_replicates(blb_env, caplog) -> N
     calls.clear()
     with caplog.at_level(logging.INFO, logger="openreltime"):
         bootstrap.blb(
-            alignment, "/bin/echo", n_subsample=1, n_replicate=1,
+            alignment, STUB_IQTREE, n_subsample=1, n_replicate=1,
             workdir=tmp_path / "run-d",
         )
     assert "master seed" in caplog.text
@@ -483,14 +489,14 @@ def test_blb_seeds_iqtree_and_guards_degenerate_replicates(blb_env, caplog) -> N
     # zero replicates: a clean error, not an IndexError on replicate_results[0]
     with pytest.raises(ValueError, match="must be >= 1"):
         bootstrap.blb(
-            alignment, "/bin/echo", n_subsample=0, n_replicate=10, seed=1,
+            alignment, STUB_IQTREE, n_subsample=0, n_replicate=10, seed=1,
             workdir=tmp_path / "run-e",
         )
 
     # a single replicate: no interval exists -> NaN, and the user is told
     with caplog.at_level(logging.WARNING, logger="openreltime"):
         lone = bootstrap.blb(
-            alignment, "/bin/echo", n_subsample=1, n_replicate=1, seed=3,
+            alignment, STUB_IQTREE, n_subsample=1, n_replicate=1, seed=3,
             workdir=tmp_path / "run-f",
         )
     assert lone["ci_lower"].isna().all() and lone["ci_upper"].isna().all()
@@ -500,7 +506,7 @@ def test_blb_seeds_iqtree_and_guards_degenerate_replicates(blb_env, caplog) -> N
 
     # two replicates do produce a (non-degenerate) interval again
     pair = bootstrap.blb(
-        alignment, "/bin/echo", n_subsample=1, n_replicate=2, seed=3,
+        alignment, STUB_IQTREE, n_subsample=1, n_replicate=2, seed=3,
         workdir=tmp_path / "run-g",
     )
     assert pair["ci_lower"].notna().all()
