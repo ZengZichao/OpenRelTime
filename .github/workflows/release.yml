@@ -1,16 +1,23 @@
-# Build the sdist and wheel for a tagged release and attach them to the
-# GitHub Release.  Runs when a `v*` tag is pushed (the v0.1.0 assets were
-# attached manually; this automates the same steps for later releases).
+# Build the sdist and wheel for a tagged release, attach them to the GitHub
+# Release, and publish them to PyPI via Trusted Publishing (OIDC — no API
+# token stored in the repository).
 #
-# Uses only first-party actions pinned by commit SHA plus the `gh` CLI that
-# ships on the runner — no third-party publish actions.  No PyPI upload yet:
-# if/when the package is published to PyPI, add Trusted Publishing on PyPI
-# and a publishing job here.
+# Triggers: a pushed `v*` tag (the normal release path) and a manual
+# workflow_dispatch (used for the initial PyPI publish of v0.1.1, which was
+# released before this workflow existed, without re-tagging).
+#
+# One-time PyPI setup: register the pending publisher at
+# https://pypi.org/manage/account/publishing/ with the exact mapping
+#   PyPI project: openreltime · Owner: ZengZichao · Repository: OpenRelTime
+#   Workflow: release.yml · Environment: pypi
+#
+# Actions are pinned by commit SHA, matching the rest of this repository.
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -39,10 +46,39 @@ jobs:
       - name: Build sdist and wheel
         run: python -m build
 
+      - name: Upload dist artifacts for the publish job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
       - name: Create the release if needed, then upload assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
-          gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+              || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            echo "Manual dispatch on $GITHUB_REF_NAME — build only, no GitHub release step."
+          fi
+
+  publish-pypi:
+    name: Publish to PyPI (Trusted Publishing)
+    needs: build-and-upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: pypi
+    permissions:
+      id-token: write # OIDC token for PyPI Trusted Publishing
+    steps:
+      - name: Download dist artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
