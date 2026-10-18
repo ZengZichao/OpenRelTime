@@ -51,6 +51,7 @@ ort = "openreltime.cli:main"
 [project.urls]
 Homepage = "https://github.com/ZengZichao/OpenRelTime"
 Documentation = "https://github.com/ZengZichao/OpenRelTime/tree/main/docs"
+PyPI = "https://pypi.org/project/openreltime/"
 
 [tool.setuptools]
 # Bundle files that MANIFEST.in declares into both the sdist and the wheel

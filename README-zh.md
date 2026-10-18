@@ -3,6 +3,8 @@
 **语言：中文** · [English](README.md)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053145.svg)](https://doi.org/10.5281/zenodo.23053145)
+[![PyPI](https://img.shields.io/pypi/v/openreltime)](https://pypi.org/project/openreltime/)
+[![Python](https://img.shields.io/pypi/pyversions/openreltime)](https://pypi.org/project/openreltime/)
 [![CI](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml)
 
 **OpenRelTime** 是相对速率框架（Relative Rate Framework, RRF；Tamura et al.
@@ -50,11 +52,14 @@ OpenRelTime 在 274-tip 哺乳动物树上与 R3F 数值一致：回归斜率 1.
 
 ## 安装
 
-> **分发方式。** 本版本以源码，以及挂在
-> [v0.1.1 Release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1)
-> 上的 sdist 与 wheel 分发；目前未发布到包索引，发布后会在此处公告。
+推荐从 PyPI 安装（`[plot]` 会带上 matplotlib，供 `--plot` 使用）：
 
-从检出安装：
+```bash
+pip install openreltime             # 引擎（numpy、scipy、pandas、click）
+pip install "openreltime[plot]"     # + matplotlib 可视化
+```
+
+从检出安装（`dev` 为开发者加装 pytest/ruff/mypy）：
 
 ```bash
 git clone https://github.com/ZengZichao/OpenRelTime
@@ -64,16 +69,14 @@ pip install --editable ".[dev,plot]"   # 核心（numpy、scipy、pandas、click
                                        # + pytest/ruff/mypy（[dev]，开发者）
 ```
 
-或者直接从 GitHub 安装已发布的 wheel——不必克隆，`[plot]` 会带上 matplotlib：
-
-```bash
-pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl"
-```
-
 桌面图形界面是独立产品，另行安装（见下文）。
 
 `plot` 与 `dev` 是本包声明的全部可选依赖组，需要多组时合并书写，例如
-`".[plot,dev]"`。
+`"openreltime[plot,dev]"`。
+
+各版本的 sdist 与 wheel 归档也继续挂在对应的 GitHub Release 上（如
+[v0.1.1](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1)），
+供溯源使用。
 
 环境要求：Python ≥ 3.10，支持 Linux、macOS 和 Windows。项目不含编译扩展，
 安装通常只需数秒。CI 在 Linux（`ubuntu-latest`）上跨 Python 3.10、3.11、3.12
@@ -94,12 +97,11 @@ Newick 或 NEXUS 树，运行 RRF，在画布上点选内部节点设置校正�
 以及一棵自带演示校正点的内置示例树。
 
 它**不属于**本仓库，也**不是**从本仓库安装的：Studio 是一款独立项目，把本引擎当作
-普通第三方依赖来使用。两者目前都不在包索引上，所以从各自的 Release 一次装两个
-wheel：
+普通第三方依赖来使用。引擎从 PyPI 安装；Studio 本身暂未上包索引，其 wheel 从它的
+Release 安装：
 
 ```bash
-pip install \
-  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl" \
+pip install "openreltime[plot]" \
   "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.1/openreltime_studio-0.1.1-py3-none-any.whl"
 openreltime-studio
 ```

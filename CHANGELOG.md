@@ -13,6 +13,10 @@ auditing the manuscript's claims against the code and then reproducing the
 defect.  Three of them could silently produce a wrong answer, so they are
 treated as corrections rather than refinements.
 
+*Distribution.*  The package is on PyPI — `pip install openreltime`
+(`pip install "openreltime[plot]"` adds matplotlib); tagged releases now
+publish there automatically.
+
 ### Fixed
 
 - **Unsatisfiable nested calibrations now raise.**  A bound that required a

@@ -57,12 +57,13 @@ in that project.  Nothing below documents its windows; `usage-en.md` §7 /
 
 ## Distribution / 分发方式
 
-> **Distribution.** This release is distributed as source. Install with
-> `pip install --editable ".[dev,plot]"` from a checkout; an index release will
-> be announced here.
+> **Distribution.** The package is on PyPI — `pip install openreltime`
+> (`pip install "openreltime[plot]"` adds matplotlib).  The sdist and wheel of
+> each release also remain attached to its GitHub release for provenance.
 
-> **分发方式。** 本版本以源码形式分发，请在检出目录中用
-> `pip install --editable ".[dev,plot]"` 安装；发布到包索引后会在此处公告。
+> **分发方式。** 本包已发布到 PyPI——`pip install openreltime`（需要绘图加
+> `pip install "openreltime[plot]"`）。各版本的 sdist 与 wheel 归档也继续挂在
+> 对应的 GitHub Release 上，供溯源使用。
 
 ## Which document to read first / 阅读顺序建议
 

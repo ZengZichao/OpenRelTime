@@ -15,13 +15,17 @@ limitations see [methods.md](methods.md).
 
 ## 1. Installation
 
-### 1.1 From a source checkout or a release wheel
+### 1.1 From PyPI, or from a source checkout
 
-> **Distribution.** This release ships as source plus the sdist and wheel
-> attached to [the v0.1.1 release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1).
-> It is not on a package index yet; an index release will be announced here.
+The package is on PyPI — no clone needed; the `[plot]` extra pulls in
+matplotlib:
 
-From a checkout:
+```bash
+python -m pip install openreltime             # engine
+python -m pip install "openreltime[plot]"     # engine + plotting
+```
+
+From a checkout (contributors — `dev` adds pytest, pytest-cov, ruff, mypy):
 
 ```bash
 git clone https://github.com/ZengZichao/OpenRelTime
@@ -29,12 +33,9 @@ cd OpenRelTime
 python -m pip install --editable ".[dev,plot]"   # core + plotting + dev tools
 ```
 
-Or without a clone, straight from the release — the `[plot]` extra pulls in
-matplotlib:
-
-```bash
-python -m pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl"
-```
+The sdist and wheel of each release also remain attached to the matching
+GitHub release (e.g. [v0.1.1](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1))
+for provenance.
 
 `plot` (matplotlib visualisation) and `dev` (pytest, pytest-cov, ruff, mypy for
 contributors) are the only extras the package declares
@@ -417,12 +418,11 @@ script does — so every number it produces is the number you would get from the
 CLI or the API with the same inputs (the analysis code itself lives here, and
 nothing about it changes when you add or remove the GUI).
 
-Neither project is on a package index yet, so install both wheels from their
-releases:
+The engine comes from PyPI; Studio itself is not on a package index yet, so its
+wheel is installed from its release:
 
 ```bash
-pip install \
-  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl" \
+pip install "openreltime[plot]" \
   "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.1/openreltime_studio-0.1.1-py3-none-any.whl"
 openreltime-studio
 ```

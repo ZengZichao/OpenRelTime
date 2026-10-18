@@ -3,6 +3,8 @@
 **Language: English** · [中文](README-zh.md)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053145.svg)](https://doi.org/10.5281/zenodo.23053145)
+[![PyPI](https://img.shields.io/pypi/v/openreltime)](https://pypi.org/project/openreltime/)
+[![Python](https://img.shields.io/pypi/pyversions/openreltime)](https://pypi.org/project/openreltime/)
 [![CI](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml)
 
 **OpenRelTime** is an open-source Python implementation of the **relative
@@ -52,11 +54,15 @@ R3F lacks — calibration conversion and analytical confidence intervals (msz236
 
 ## Installation
 
-> **Distribution.** This release ships as source plus the sdist and wheel
-> attached to [the v0.1.1 release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1).
-> It is not on a package index yet; an index release will be announced here.
+Install from PyPI (recommended — the `[plot]` extra brings matplotlib for
+`--plot`):
 
-From a checkout:
+```bash
+pip install openreltime             # engine (numpy, scipy, pandas, click)
+pip install "openreltime[plot]"     # + matplotlib visualisation
+```
+
+From a checkout (`dev` adds pytest/ruff/mypy for contributors):
 
 ```bash
 git clone https://github.com/ZengZichao/OpenRelTime
@@ -66,17 +72,14 @@ pip install --editable ".[dev,plot]"   # core (numpy, scipy, pandas, click)
                                        # + pytest/ruff/mypy ([dev], contributors)
 ```
 
-Or install the released wheel directly from GitHub — no clone, and the `[plot]`
-extra brings matplotlib:
-
-```bash
-pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl"
-```
-
 The desktop GUI is a separate product, installed separately (see below).
 
 `plot` and `dev` are the only extras the package declares; combine them in one
-call, e.g. `".[plot,dev]"`.
+call, e.g. `"openreltime[plot,dev]"`.
+
+The sdist and wheel of each release also remain attached to the matching GitHub
+release (e.g. [v0.1.1](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1))
+for provenance.
 
 Requirements: Python >= 3.10, Linux/macOS/Windows.  There are no compiled
 extensions; installation takes seconds.  CI runs the test suite on Linux
@@ -102,11 +105,11 @@ with demo calibrations so first-time users need no data.
 
 It is **not** part of this repository and is **not** installed from it.  It ships
 as its own project and depends on the engine as an ordinary third-party package.
-Neither is on an index yet, so install both wheels from their releases:
+The engine comes from PyPI; Studio itself is not on an index yet, so its wheel
+is installed from its release:
 
 ```bash
-pip install \
-  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl" \
+pip install "openreltime[plot]" \
   "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.1/openreltime_studio-0.1.1-py3-none-any.whl"
 openreltime-studio
 ```

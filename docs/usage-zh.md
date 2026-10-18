@@ -13,13 +13,16 @@
 
 ## 1. 安装
 
-### 1.1 从源码检出或 Release wheel 安装
+### 1.1 从 PyPI 或源码检出安装
 
-> **分发方式。** 本版本以源码，以及挂在
-> [v0.1.1 Release](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1)
-> 上的 sdist 与 wheel 分发；目前未发布到包索引，发布后会在此处公告。
+本包已发布到 PyPI——不必克隆；`[plot]` 会带上 matplotlib：
 
-从检出安装：
+```bash
+python -m pip install openreltime             # 引擎
+python -m pip install "openreltime[plot]"     # 引擎 + 绘图
+```
+
+从检出安装（`dev` 为开发者加装 pytest、pytest-cov、ruff、mypy）：
 
 ```bash
 git clone https://github.com/ZengZichao/OpenRelTime
@@ -27,11 +30,9 @@ cd OpenRelTime
 python -m pip install --editable ".[dev,plot]"   # 核心 + 绘图 + 开发工具
 ```
 
-不必克隆，直接从 Release 装 wheel 也可以——`[plot]` 会带上 matplotlib：
-
-```bash
-python -m pip install "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl"
-```
+各版本的 sdist 与 wheel 归档也继续挂在对应的 GitHub Release 上（如
+[v0.1.1](https://github.com/ZengZichao/OpenRelTime/releases/tag/v0.1.1)），
+供溯源使用。
 
 `plot`（matplotlib 绘图）与 `dev`（pytest、pytest-cov、ruff、mypy，面向开发者）
 即 `pyproject.toml` 中 `[project.optional-dependencies]` 声明的全部 extras；解析
@@ -383,11 +384,10 @@ cal2  = ort.calibrate(times, cals, taxon_table=table_map)
 致。因此在界面里得到的数值，就是用相同输入跑 CLI 或 API 得到的数值：分析代码始
 终在本引擎内，装或不装图形界面都不会改变它。
 
-两者目前都不在包索引上，请从各自的 Release 一次装两个 wheel：
+引擎从 PyPI 安装；Studio 本身暂未上包索引，其 wheel 从它的 Release 安装：
 
 ```bash
-pip install \
-  "openreltime[plot] @ https://github.com/ZengZichao/OpenRelTime/releases/download/v0.1.1/openreltime-0.1.1-py3-none-any.whl" \
+pip install "openreltime[plot]" \
   "OpenRelTime-Studio @ https://github.com/ZengZichao/OpenRelTime-Studio/releases/download/v0.1.1/openreltime_studio-0.1.1-py3-none-any.whl"
 openreltime-studio
 ```
