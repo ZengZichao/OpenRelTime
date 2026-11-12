@@ -10,14 +10,14 @@
 
 **决策**：`openreltime.treeio.root_outgroup` 复刻
 `ape::root(..., resolve.root = TRUE)` 紧接着 `ape::drop.tip` 的可观测行为（已对照
-ape 5.8.1 验证；见 `data/PROVENANCE-zh.md` 与黄金文件
+ape 5.8.1 验证；见 `data/PROVENANCE-zh.md` 与金标准文件
 `data/golden/r3f/example_rooted_dropped.nwk`）：
 
 * 插入一个新的根，以外群的 MRCA 作为它的一个子节点；外群一侧带一条零长干枝，除非
   该 MRCA 恰为单个末端，此时保留它自己的末端枝；
 * 反向路径上剩余的各边保留原有枝长，该路径上的一元节点被收缩（枝长累加）；
 * 删除外群之后，残留的一元根被收缩，单子根之上的最后一条边被**丢弃**；
-* 多末端外群必须构成一个完整的簇；违反时默认抛出 `ValueError`，取
+* 多末端外群必须构成一个完整的单系群；违反时默认抛出 `ValueError`，取
   `outgroup_check="warn"` 时降级为警告；
 * 内群至少保留 3 个末端。
 

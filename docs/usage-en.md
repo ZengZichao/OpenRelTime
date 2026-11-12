@@ -158,8 +158,13 @@ need a tip → group mapping, taken from either source:
 ### 3.1 Relative rates and times
 
 ```bash
-openreltime rates       -i tree.nwk --outgroup og.txt -o mam
-openreltime times       -i tree.nwk --outgroup og.txt -o mam --r3f-compat
+# relative rates only (lineage rates, root = 1.0)
+openreltime rates -i tree.nwk --outgroup og.txt -o mam
+
+# relative node times only (tips = 0)
+openreltime times -i tree.nwk --outgroup og.txt -o mam --r3f-compat
+
+# both at once (rates + times + NEXUS timetree + rate-coloured plot)
 openreltime rates-times -i tree.nwk --outgroup og.txt -o mam --plot mam_tree.png
 ```
 
@@ -231,6 +236,7 @@ openreltime ci -c mam_cal --n-sites 1000 -o mam_ci
 
 ```bash
 openreltime corrtest -i tree.nwk --outgroup og.txt -o mam
+# for small trees (< 50 tips) resampling is recommended:
 openreltime corrtest -i tree.nwk --outgroup og.txt --sister-resample 100 --seed 1 -o mam
 ```
 
@@ -254,6 +260,11 @@ openreltime ddbd -i tree.nwk --sampling-frac 0.5 -o mam_bd
   available as `sampling_frac_fitted` in the report);
 - `--plot curve.png` saves the node-time histogram with the fitted
   birth-death density.
+
+The output table `<prefix>_ddbd.txt` has the columns
+`birth.rate / death.rate / sampling.frac`; these are usable as reference
+tree-prior parameters for MCMCTree/BEAST (the rates are in the anchor time
+unit).
 
 ### 3.6 tree2table
 
@@ -487,7 +498,7 @@ bounds), msz014 (CorrTest) and btab307 (ddBD).
 | `outgroup taxon [...] not found in tree (as tip or group)` | the name is neither a tip nor a group; check the spelling or pass `--taxon-table` |
 | `conflicting calibration constraints` | calibration nodes contradict each other (e.g. child bounds older than parent); relax bounds |
 | `the repair loop converged on node ages that are not nested in the tree` | no rate rescaling of this tree can host the supplied bounds: the converged solution has a negative age or a descendant older than its ancestor, and the message names those node ids.  The shipped `data/examples/example_calibrations.tsv` under `--method effective` is a worked instance; replace it with `example_calibrations_feasible.tsv` or relax the bounds |
-| `could not be satisfied within 100 iterations` | same; see the listed nodes |
+| `calibration constraints could not be satisfied within 100 iterations` | same; see the listed nodes |
 | `a calibration needs at least one finite bound … but neither was given` | the row has `.` for `min_bound` and `max_bound`; add hard bounds, or run `--method effective` for a density-only row |
 | `method='bounds' cannot use density-only calibrations` | density-only calibration with `--method bounds`; add `min_bound`/`max_bound` to that row, or switch to `--method effective` |
 | `no 'calibrate' block in <prefix>_report.json` | `ci -c` was given a prefix that never ran `calibrate`; re-run `calibrate` with that `-o` |
@@ -496,7 +507,7 @@ bounds), msz014 (CorrTest) and btab307 (ddBD).
 | `sampling_frac must lie in (0, 1]` | `0` is R3F's "estimate it" sentinel — omit `--sampling-frac` instead |
 | `anchor node id must be a positive internal-node id` | node ids are 1-based here; `0` is not the "no anchor" sentinel |
 | `executable not found: iqtree/megacc` | pass the full executable path |
-| `argument ... contains characters outside the allowed set` | external-tool arguments must not contain shell metacharacters or spaces |
+| `refusing to run: argument ... contains shell metacharacters` | external-tool arguments may not contain a shell control character (semicolon, ampersand, pipe, angle brackets, dollar, backtick, quote, tab or newline); spaces and non-ASCII paths are allowed, and no shell is ever started |
 | CorrScore = 0 or NaN | tree too small or extreme rates; try `--sister-resample`, then inspect branch lengths |
 
 ## 10. Reproducibility

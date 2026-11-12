@@ -1,8 +1,9 @@
 # 参与贡献 OpenRelTime
 
-感谢关注！本文档说明一个补丁被接受所需满足的最低要求。
-English version: [CONTRIBUTING.md](CONTRIBUTING.md)。Issue 与 PR 使用中文
-或英文均可。
+**语言：中文** · [English](CONTRIBUTING.md)
+
+感谢关注！本文档说明一个补丁被接受所需满足的要求。
+Issue 与 PR 使用中文或英文均可。
 
 ## 开发环境
 
@@ -28,7 +29,7 @@ python -m build                          # 仅在改动打包相关文件时
 
 CI 在 Ubuntu（Python 3.10–3.13）与 macOS（3.13）上运行同样的检查，另有
 `minimum-versions` 作业按 `.github/constraints-minimum.txt` 钉住依赖的
-最低声明版本。`mypy` 目前在 CI 中为**咨询模式**（不阻塞），本地可运行
+最低声明版本。`mypy` 目前在 CI 中为**建议模式**（不阻塞），本地可运行
 `python -m mypy openreltime --python-version 3.12`，请避免引入新的类型
 问题。
 
@@ -38,9 +39,9 @@ CI 在 Ubuntu（Python 3.10–3.13）与 macOS（3.13）上运行同样的检查
   （`feat:`、`fix:`、`docs:`、`chore:` 等）。
 - 面向用户的文档为中英双语：改动 `docs/*.md` 或任一 README 时，请在
   同一个 PR 中同步更新对应的 `-zh` 版本。
-- `data/golden/` 与 `e2e_tests/data/golden/` 下的 golden 数据由
-  `reproduce/` 中的脚本再生成，**不要手改**。若改动确实会改变输出，
-  请再生成 golden 文件并在 PR 描述中说明原因。
+- `data/golden/` 与 `e2e_tests/data/golden/` 下的金标准（golden）数据
+  由 `reproduce/` 中的脚本再生成，**不要手改**。若改动确实会改变
+  输出，请再生成金标准文件并在 PR 描述中说明原因。
 
 ## 提交方式
 

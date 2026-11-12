@@ -22,7 +22,8 @@ or the command line.
 - Documentation (English): [docs/README.md](docs/README.md) — user guide,
   parameter handbook, methods, validation, tutorials
 - 中文文档（全手册亦有中文版）：[README-zh.md](README-zh.md) ·
-  [文档目录](docs/README.md) · [使用说明](docs/usage-zh.md)
+  [文档目录](docs/README.md) · [使用说明](docs/usage-zh.md) ·
+  [参数手册](docs/parameters-zh.md)
 - API/CLI equivalence, reproducible golden standards, GPL-3.0
 
 ```
@@ -129,7 +130,7 @@ end, never new analysis code.
 ```python
 import openreltime as ort
 
-tree = ort.read_tree("example.nwk", outgroup=["Out1", "Out2"])
+tree = ort.read_tree("example.nwk", outgroup=["Out1", "Out2"])  # root and prune outgroup
 times = ort.rrf_rates_times(tree)             # rates + relative times
 times.write("quickstart", with_rate=True, nexus=True)   # CSV + NEXUS timetree
 ```
@@ -148,23 +149,27 @@ openreltime blb -a alignment.fasta --iqtree iqtree --seed 42 -o blb_out
 
 ## Features
 
-- **RRF core** — geometric mean (R3F/msy044-compatible) and arithmetic mean
-  (PNAS 2012) conventions; extreme-rate guard; polytomy handling; Newick +
+- **RRF core** — two averaging conventions: geometric mean (msy044 eqs 28-42;
+  used by R3F and the default here) and arithmetic mean (msy044 eqs 1-27; the
+  PNAS 2012 semantics); extreme-rate guard; polytomy handling; Newick +
   NEXUS (`[&rate=...]`) I/O.
 - **Calibration** — hard min/max bounds and probability densities
   (uniform/exponential/normal/lognormal) converted to absolute times via the
   global factor *f*; the effective-bounds resampling method of msz236.
-- **Analytical CIs** — delta method (msz236 eqs 7-14) with flexible sampling
-  variance sources and truncation at hard bounds; empirical node-age CIs
-  from the effective-bounds replicates.
+- **Analytical CIs** — delta method (msz236 eqs 7-14) with sampling variance
+  taken from the first supplied source (explicit branch variances, then the
+  Poisson approximation, then zero) and truncation at hard bounds; empirical
+  node-age CIs from the effective-bounds replicates.
 - **CorrTest** — autocorrelated-rates test with the published
-  fixed-coefficient logistic model.
+  fixed-coefficient logistic model of Tao et al. (2019).
 - **ddBD** — birth-death speciation prior (birth, death, sampling fraction)
   for Bayesian dating pipelines.
-- **BLB pipeline** — two-level site resampling through IQ-TREE with
-  per-clade time aggregation.
+- **BLB pipeline** — two-level site resampling (subsample without replacement,
+  then bootstrap up to the original length) through IQ-TREE, with per-clade
+  time aggregation.
 - **MEGA-CC bridge** (optional) — generate `.mao` files, run `megacc`, parse
-  RelTime output back to OpenRelTime tables.
+  RelTime output back to OpenRelTime tables; eases migration for MEGA users and
+  third-party cross-comparison.
 
 ## Command-line overview
 
@@ -188,7 +193,7 @@ warnings and random seed into `<prefix>_report.json`; runs that share a prefix
 contribute their own key. `tree2table`, `monophyly`, `blb` and `megacc` write
 only their table.
 
-## Calibration file (`calibrations.tsv`)
+## Calibration file (`calibrations.tsv`, tab-separated)
 
 ```
 node_id	taxon_set	min_bound	max_bound	density	density_params
@@ -213,7 +218,7 @@ in [`docs/tutorials/tutorial2-end-to-end.md`](docs/tutorials/tutorial2-end-to-en
 
 The test suite encodes the project's acceptance gates; each gate, what it
 actually asserts, and which shipped modules it does *not* cover are listed in
-[`docs/validation.md`](docs/validation.md):
+[`docs/validation.md`](docs/validation.md).  One command reproduces them all:
 
 ```bash
 python -m pytest tests/

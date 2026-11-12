@@ -39,7 +39,7 @@ openreltime corrtest -i example.nwk --outgroup "Ornithorhynchus_anatinus,Zagloss
 openreltime ddbd -i example.nwk --outgroup "Ornithorhynchus_anatinus,Zaglossus_bruijni,Tachyglossus_aculeatus" --anchor-time 1.85 -o tutorial1
 ```
 
-写出的文件如下表。三者都共用 `tutorial1` 前缀，三条命令会把各自的参数、警告与随
+写出的文件如下表。这些文件都共用 `tutorial1` 前缀，三条命令会把各自的参数、警告与随
 机种子合并写入同一个 `tutorial1_report.json`。
 
 | 文件 | 来自 |

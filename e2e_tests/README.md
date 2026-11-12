@@ -84,14 +84,14 @@ python -m pytest e2e_tests/ -v --html=e2e_tests/outputs/report.html
 | Module | Cases | Coverage |
 |--------|-------|----------|
 | `test_01_rrf_core.py` | 7 | `rates` / `times` CLI, golden regression, output files, normalization, arithmetic mean, guard options, NEXUS round-trip |
-| `test_02_calibration_ci.py` | 9 | `calibrate` bounds/effective, CI default/branch-var/n-sites, API vs CLI parity, conflicting calibrations, density-only constraints, pinned-node flagging |
+| `test_02_calibration_ci.py` | 10 | `calibrate` bounds/effective, CI default/branch-var/n-sites, API vs CLI parity, conflicting calibrations, density-only constraints, pinned-node flagging |
 | `test_03_corrtest_ddbd.py` | 7 | CorrTest golden regression, full-precision API, resampling; ddBD golden, anchor, plot, API/CLI parity |
 | `test_04_tree2table_monophyly.py` | 5 | `tree2table` branch lengths and node ages; monophyly auto/table/ad-hoc groups |
-| `test_05_cli_api_parity.py` | 3 | API-written outputs match CLI, `_report.json` merging, parameter recording |
-| `test_06_input_validation.py` | 8 | Negative branch lengths, duplicate tips, polytomies, incomplete outgroups, empty calibration rows, density-only vs method mismatch, missing input files |
+| `test_05_cli_api_parity.py` | 4 | API-written outputs match CLI, `_report.json` merging, parameter recording |
+| `test_06_input_validation.py` | 8 | Negative branch lengths, duplicate tips, polytomies, too-few ingroup tips, incomplete outgroups, empty calibration rows, density-only vs method mismatch, missing input files |
 | `test_07_blb_external.py` | 2 | Full BLB pipeline (IQ-TREE) and custom IQ-TREE argument forwarding |
 | `test_08_megacc_external.py` | 2 | MEGA-CC bridge with and without calibrations |
-| **Total** | **43** | 8 modules, engine CLI + API only |
+| **Total** | **45** | 8 modules, engine CLI + API only |
 
 ## Skip Conditions
 

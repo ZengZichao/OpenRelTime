@@ -97,9 +97,9 @@ publish there automatically.
   the external tool they invoked, so a run can be attributed to a specific
   IQ-TREE or MEGA-CC build.  No release is pinned.
 - A FigTree-readability test for the emitted NEXUS (rooted-tree token,
-  annotation-free `TAXA` block, one `[&rate=...]` comment per node, numeric
-  branch lengths, independent re-parse), plus an explicit test that plain
-  `.nwk` output does **not** carry rate annotations.
+  annotation-free `TAXA` block, one `[&rate=...]` comment per node, finite
+  numeric branch lengths, independent re-parse), plus an explicit test that
+  plain `.nwk` output does **not** carry rate annotations.
 - `data/examples/example_calibrations_feasible.tsv`: a runnable, mutually
   consistent example.  The pre-existing `example_calibrations.tsv` is a syntax
   illustration only — its density-only row makes it raise under the default
@@ -111,12 +111,13 @@ publish there automatically.
 - `@pytest.mark.gate(...)` marks across the unit suite, registered in
   `pyproject.toml`.
 - `figures/`: the manuscript's four figure scripts and the two `-data.json`
-  files they draw from, plus `figures/README.md`.  They are byte-identical to
-  the sources that rendered the submitted artwork — re-running each script with
-  `--outdir` reproduces all four published PNGs byte for byte — and
-  `MANIFEST.in` ships them in the source distribution, so the Data-availability
-  statement that names `figures/` is true of the deposit rather than of the
-  authors' working copy.  Rendered artwork stays out of the distribution.
+  files Figures S2 and S3 draw from, plus `figures/README.md`.  They are
+  byte-identical to the sources that rendered the submitted artwork —
+  re-running each script with `--outdir` reproduces all four published PNGs
+  byte for byte — and `MANIFEST.in` ships them in the source distribution, so
+  the Data-availability statement that names `figures/` is true of the deposit
+  rather than of the authors' working copy.  Rendered artwork stays out of the
+  distribution.
 
 ### Changed
 
@@ -185,7 +186,7 @@ extensions.
   `min_bound`/`max_bound` values in a tab-separated `calibrations.tsv`.
 - **Node targeting** by internal node id or by the MRCA of a taxon set, whose
   entries may be tip labels or a group name.
-- **Cancellable calibration**: `calibrate(..., progress=...)` returns
+- **Cancellable calibration**: `calibrate(..., progress=...)` raises
   `CalibrationCancelled` when the callback returns `False`.
 - **Analytical confidence intervals** (`openreltime.ci`): the delta method of
   msz236 (eqs 7-14), with branch variance split into sampling and
@@ -246,9 +247,9 @@ extensions.
 - **Result objects** (`openreltime.report`) with `to_pandas()`, `to_json()` and
   `write(prefix)`; CSV, Newick, NEXUS and JSON outputs come from the same code
   path as the CLI, and `--r3f-compat` selects R3F's file and column names.
-- **Reproducibility reports**: every analysis stage whose parameters can move
-  the numbers (`rates`, `times`, `rates-times`, `calibrate`, `ci`, `corrtest`,
-  `ddbd`) merges its parameters, warnings and random seed into
+- **Reproducibility reports**: the seven analysis stages whose parameters can
+  move the numbers (`rates`, `times`, `rates-times`, `calibrate`, `ci`,
+  `corrtest`, `ddbd`) merge their parameters, warnings and random seed into
   `<prefix>_report.json`, one top-level key per run sharing that prefix; `ci`
   replays the settings its `calibrate` run recorded.
 - **All randomness** (density sampling, BLB, sister resampling) routed through

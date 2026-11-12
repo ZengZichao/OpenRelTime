@@ -47,7 +47,7 @@ three monotremes) they give `f = 371.60` under `method="bounds"` and solve under
 `method="effective"` too, with no warning on either run.  The bounds are still
 illustrative soft bounds, not suggested fossil constraints.
 
-```
+```text
 node_id	taxon_set	min_bound	max_bound	density	density_params
 -	Homo_sapiens|Pan_troglodytes	5.0	8.0	.	.
 -	Mus_musculus|Rattus_norvegicus	12.0	18.0	.	.

@@ -14,7 +14,7 @@ GPL-3 §4/§5 的要求，同时落实项目的许可决策 ADR-003（索引见
 * 查阅的文件：`R/rrf_rates.R`、`R/rrf_times.R`、`R/rrf_rates_times.R`、
   `R/corrtest.R`、`R/ddbd.R`、`R/tree2table.R`。
 * 复用性质：
-  * RRF 遍历的后序/前序结构、零枝长 epsilon 守卫的放置位置、末端孙辈速率的回填、
+  * RRF 遍历的后序/前序结构、零枝长 epsilon 保护的放置位置、末端孙辈速率的回填、
     前序调整中祖辈速率的特例处理，以及速率比保护，都是按**语义**复刻的（ADR-003 中
     的 Level L2/L3），以便 OpenRelTime 在数值上复现 R3F（门槛 G2a 与 G2b，见
     `docs/validation-zh.md`）；相应代码内嵌了形如
@@ -31,7 +31,7 @@ GPL-3 §4/§5 的要求，同时落实项目的许可决策 ADR-003（索引见
 * 仓库：<https://github.com/KumarMEGALab/MEGA-source-code>
 * 查阅的文件：`MEGA12.1-source/reltime/mreltimecomputer.pas`
   （`TimeFactor`/`MinTimeFactor`/`MaxTimeFactor` 可行性设计与
-  `PropagateConstraints`）、`mcalibrationsampler.pas`（有效边界复制循环）。
+  `PropagateConstraints`）、`mcalibrationsampler.pas`（有效边界重抽样复制循环）。
 * 复用性质：仅为设计层面（L2）。`openreltime/calibrate.py` 中的校正求解器围绕同一
   个全局因子概念，是对已发表描述（msz236）的独立实现。未转录任何 Pascal 代码。
 * 版权：(c) Sudhir Kumar, Koichiro Tamura, Glen Stecher 及 MEGA 开发团队。GPL-3.0。
@@ -41,7 +41,7 @@ GPL-3 §4/§5 的要求，同时落实项目的许可决策 ADR-003（索引见
 * 外群置根加剔除的流程（`openreltime/treeio.py::root_outgroup`、
   `openreltime/tree.py::contract_unary_nodes`）复现 `ape::root(resolve.root = TRUE)`
   加 `ape::drop.tip`（ape 5.8.1）的可观测行为，使输出的树可互换。相关记录见
-  `docs/adr/ADR-004-tree-operations.md`。
+  `docs/adr/ADR-004-tree-operations-zh.md`。
 * 版权：(c) Emmanuel Paradis, Klaus Schliep。GPL-2+。
 
 ## 4. 第三方数据
@@ -56,5 +56,5 @@ CorrTest 的参考仓库（`cathyqqtao/CorrTest`）未提供许可证；**本项
 
 ## 6. 学术致谢
 
-若使用 OpenRelTime，请引用第 1～3 节所列论文，并引用 OpenRelTime 本身（见
+若使用 OpenRelTime，请引用第 1～3 节所列论文，并引用 OpenRelTime 的发布版本（见
 `CITATION.cff`），以回应原作者的善意请求。

@@ -9,7 +9,7 @@ import openreltime as ort
 
 tree = ort.read_tree("mam.treefile", outgroup=["Out1", "Out2"])
 
-# sampling fraction fixed (only birth/death estimated)
+# sampling fraction to report (rho stays free in the fit)
 bd = ort.ddbd(tree, sampling_frac=0.5, anchor_time=1.85)
 
 # everything estimated (default)
@@ -28,7 +28,7 @@ Note the semantics of `sampling_frac`, which follow R3F: it sets the fraction
 not constrain the fit.  The free-rho optimum stays visible as
 `sampling_frac_fitted` in the report.
 
-## MEGA-CC bridge (optional extra)
+## MEGA-CC bridge (optional)
 
 For migration from MEGA workflows or third-party cross-checks:
 
@@ -48,8 +48,9 @@ table = parse_megacc_output(outputs, outgroup=["Out1", "Out2"])
 `run_megacc` generates a minimal `reltimeFromBranchLengths.mao`
 (`ppRelTimeBLens = true` plus optional overrides), probes the megacc version
 banner and validates every argument before starting the process (no shell).
-The outputs are parsed back into an R3F-compatible node-time table so MEGA
-results can be compared node-by-node with `openreltime.rrf_times`.
+The outputs are parsed back into an R3F-compatible node-time table, whose
+`source` column records the origin of each row, so MEGA results can be compared
+node-by-node with `openreltime.rrf_times`.
 
 The equivalent command line:
 

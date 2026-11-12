@@ -1,5 +1,7 @@
 # Security Policy
 
+**Language: English** · [中文](SECURITY-zh.md)
+
 ## Supported versions
 
 Security fixes are made to the latest tagged release (`v0.1.x`) and to

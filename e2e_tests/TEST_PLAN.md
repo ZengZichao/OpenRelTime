@@ -15,7 +15,7 @@ This end-to-end (E2E) test plan aims to automate validation of the complete Open
 | Correlation / birth-death | `corrtest` golden regression, full-precision API, resampling; `ddbd` golden, anchor, plot, API/CLI parity |
 | Tree table & monophyly | `tree2table` branch lengths and node ages; `monophyly` auto/table/ad-hoc groups |
 | CLI/API parity | API-written outputs match CLI, `_report.json` merging, parameter recording |
-| Input validation | Negative branch lengths, duplicate tips, polytomies, incomplete outgroups, empty calibration rows, density-only vs method mismatch, missing input files |
+| Input validation | Negative branch lengths, duplicate tips, polytomies, too-few ingroup tips, incomplete outgroups, empty calibration rows, density-only vs method mismatch, missing input files |
 | External tools | BLB (IQ-TREE); MEGA-CC (`megacc`) bridge |
 
 ## 3. Test Data
@@ -71,6 +71,7 @@ All data reside under `e2e_tests/data/` and never leave the working directory.
 |------|-------|---------------------|
 | `test_calibrate_bounds_cli` | Calibrations + `--method bounds` | Produces `_calibrated_*.csv`; time factor > 0 |
 | `test_calibrate_effective_cli` | Calibrations + `--method effective` | Effective method runs successfully |
+| `test_calibrate_effective_rejects_the_format_demo` | `example_calibrations.tsv` + `--method effective` | Exits non-zero, naming the offending node ids; nothing is written |
 | `test_ci_default` | Calibrated result | CI file produced with lower/upper node-age bounds |
 | `test_ci_with_n_sites` | `--n-sites` | CI width changes with n-sites |
 | `test_ci_with_branch_var` | `--branch-var` | Runs using branch-length variances |
@@ -106,6 +107,7 @@ All data reside under `e2e_tests/data/` and never leave the working directory.
 | Test | Input | Acceptance Criteria |
 |------|-------|---------------------|
 | `test_api_write_matches_cli_rates_times` | API-generated files vs CLI | DataFrame difference is zero |
+| `test_cli_and_api_artefacts_are_byte_identical_on_one_machine` | Same subcommand run via API and CLI | Every artefact is byte-identical; `_report.json` agrees on all shared keys |
 | `test_report_json_merges_blocks` | Multi-stage analysis | `_report.json` merges all stage parameters |
 | `test_cli_parameters_recorded` | Parameterized run | Report parameters match command-line flags |
 

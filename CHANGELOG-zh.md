@@ -6,9 +6,9 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
 
 ## 0.1.1 — 2026-10-08
 
-投稿前审阅驱动的缺陷修复与加固版本。下列每一项都是先把稿件陈述逐条对照代码、
-再复现出问题后修正的。其中前三项原本会**静默给出错误结果**，因此按缺陷修复处理，
-而非按改进处理。
+缺陷修复与加固版本，产生于为随附的 *Bioinformatics* Application Note 所做的
+投稿前审阅。下列每一项都是先把稿件陈述逐条对照代码、再复现出问题后修正的。
+其中三项原本会**静默给出错误结果**，因此按缺陷修复处理，而非按改进处理。
 
 *分发方式。* 本包已发布到 PyPI——`pip install openreltime`（`pip install
 "openreltime[plot]"` 附带 matplotlib）；此后打标签的版本会自动发布到 PyPI。
@@ -17,7 +17,31 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
 
 - **不可满足的嵌套校正现在会报错。** 要求后代节点比其祖先更老的界值，此前只追加
   一条警告并返回一个**违反所请求 `min_bound`** 的解，同时还放弃修复其余校正行。
-  现在抛出 `ValueError` 并点名节点与上下界，与既有的「根无法变轻」路径一致。
+  现在抛出 `ValueError` 并点名节点与上下界，与既有的「根无法变年轻」路径一致。
+- **这条保证现在覆盖的是收敛解，而不只是某一轮。** 上面的嵌套检查只看本轮正在修复的
+  最严重违反者，于是一个非单调的解仍可能收敛完成并带着警告被返回。在
+  `data/examples/example_calibrations.tsv` 上以 `method='effective'` 实测
+  （`n_effective=10000`、`seed=20260906`）：`time_factor` 4432.82，根 1162.86 Ma，
+  节点 307 为 **-3998.56 Ma**，四处父子倒置，四条 `NaN` 隐含速率，而不报错。现在每个
+  输出的节点年龄都会被重新检查非负性与树自身的父子次序，不通过就抛出错误并点名出问题
+  的节点 id。`example_calibrations_feasible.tsv` 不受影响
+  （`f = 371.59973111298007`，零违例）。
+- **单侧校正边界集合取它的那条有限边界。** 可行因子此前被夹到 `1.0` 的下限，而那个
+  常数属于无量纲的 RRF 相对尺度，不属于调用方的时间单位；于是一个要求树比未校正解
+  *更年轻*的下界被静默地放任不管（界值 0.1 → `f = 1.0`），高于它的最上界反而把整棵树
+  的每个年龄都*抬高*（界值 0.3 → `f = 1.2862`），同一条物理约束用 Ma 与用 Ga 表述
+  还会有不同行为。现在直接采用那条边界，这正是文档一贯的说法，也让结果与时间单位无
+  关。两侧都给界的集合——每一份随包示例与基准文件——都没有被改动，因为它们从不走到
+  那个分支。
+- **CI 的 `notes` 列不再把已满足的界值说成未满足。** 求解器已经放到硬边界上的节点，
+  只要比较时差了一个 ULP（最后一位），就被写成 "calibration constraint not satisfied
+  by the solver"，于是面向用户的 CSV 列里留下一句假话；而紧邻的那条被钉住节点的测试
+  早已在使用钉住容差。现在两者都用它。
+- **枝长超出适用范围现在会被告知。** msz236 式 (14) 在比值 `b_j^2 / sum(b^2)` 上与
+  尺度无关，在由此得到的半宽上却并非如此，所以区间的绝对宽度取决于输入枝长的单位（实
+  测：同一棵树的枝长分别按 1、1/10 与 1/100 缩放时，宽度为 0.426197、0.042620 与
+  0.0042620）。估计量就是被引用的那一个，刻意不作改动；`openreltime ci` 现在会在最长
+  枝落在 0.02-5 每位点置换数之外时每次调用只警告一次。
 - **`corrtest(anchor_node=...)` 不再产出 `inf`/`NaN`。** 其 `anchor_time` 默认
   为 `0.0`，锚点缩放因此除以零，并把 `{"mean.rate": Infinity, "sd.rate": NaN}`
   写进 JSON 报告——这不是合法的严格 JSON，符合规范的解析器会直接拒绝。现在给定
@@ -27,11 +51,11 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
   了错误的先验。现在每个密度族都有键白名单（`uniform`: min,max；
   `exponential`: offset,mean；`normal`: mean,sd；`lognormal`:
   offset,meanlog,sdlog），未知键或缺键一律报错。
-- **退化输入不再被判定为显著。** 未定义的 Spearman 相关系数此前被替换为 `0.0`
-  再送入固定系数的 logistic 模型，于是全零枝长的树会得到 `CorrScore ≈ 1` 且落在
-  `P < 0.001` 档——用零信息给出最强结论。此类树现在被拒绝。
+- **CorrTest 的退化输入不再被判定为显著。** 未定义的 Spearman 相关系数此前被替换为
+  `0.0` 再送入固定系数的逻辑回归模型，于是全零枝长的树会得到 `CorrScore ≈ 1`
+  且落在 `P < 0.001` 档——用零信息给出最强结论。此类树现在被拒绝。
 - **拒绝 `n_effective=1`**，不再「跑 2 次却报告 1 次」。
-- **`openreltime.<模块>` 名字遮蔽。** 包内重导出的函数与其同名模块互相遮蔽，
+- **`openreltime.<module>` 名字遮蔽。** 包内重导出的函数与其同名模块互相遮蔽，
   导致 `openreltime.calibrate.Calibration` 抛 `AttributeError`。现在这些属性是
   可调用的模块对象：`openreltime.calibrate(...)` 与
   `openreltime.calibrate.Calibration` 都可用。
@@ -39,7 +63,7 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
   但命令行的读树辅助函数从不传它，于是除 `blb` 外每个子命令的
   `--resolve random` 都不可复现、也不进报告。现在凡是有 `--resolve` 的命令
   都同时有 `--seed` 并向下传递；种子会记进报告（只写 CSV、没有报告块的
-  `monophyly` 是文档化的例外），`ci` 则用它所依据的那次标定记录下的种子重读树。
+  `monophyly` 是文档化的例外），`ci` 则用它所依据的那次校正记录下的种子重读树。
 - `ddbd` 与 `corrtest` 中归一化极大值处的除零保护。
 
 ### 新增
@@ -52,13 +76,13 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
 - `data/examples/example_calibrations_feasible.tsv`：一份真正可运行、彼此自洽的
   示例。原有 `example_calibrations.tsv` 只用于演示语法——它的纯密度行使其在默认
   `method='bounds'` 下直接抛错，而其互相矛盾的界值会把 4 条谱系压到非正时长。
-- `tools/check_gates.py`：把 `docs/validation.md` 的门禁表与实测收集到的测试 id
+- `tools/check_gates.py`：把 `docs/validation.md` 的门槛表与实测收集到的测试 id
   及 `@pytest.mark.gate` 标记互相校验；`tools/count_tests.py` 报告各套件计数。
 - 单元测试套件范围内的 `@pytest.mark.gate(...)` 标记，并已在 `pyproject.toml` 注册。
 - `figures/`：手稿四张图的绘图脚本、S2/S3 所读取的两份 `-data.json`，以及
   `figures/README.md`。这些文件与产出已投稿图面的源文件逐字节一致——为每个脚本
   加上 `--outdir` 重跑，四张已发布 PNG 均可逐字节复现。`MANIFEST.in` 随源码分发
-  一并打包它们，使 Data availability 中点名 `figures/` 的表述对存档本身成立，
+  一并打包它们，使数据可用性声明中点名 `figures/` 的表述对存档本身成立，
   而不仅对作者的工作副本成立。渲染产物不进入分发包。
 
 ### 变更
@@ -68,12 +92,12 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
   3.10/3.11/3.12，文档已改为真实矩阵：Linux 3.10–3.13，macOS 仅 3.13。
 - `ZERO_BRLEN_WARN_FRACTION` 与 `MIN_INGROUP_TIPS` 现在真正被使用它们的代码引用，
   不再是与字面量并存的第二份真相。
-- `ci.py` 模块文档串不再声称区间使用「标定后的绝对速率」；实现一直使用的是尺度
+- `ci.py` 模块文档串不再声称区间使用「校正后的绝对速率」；实现一直使用的是尺度
   不变的相对 RRF 速率。
-- 门禁 id 现在可机器校验，且 `tests/test_taxonomy_monophyly.py` 的标注与文档
-  分配给它的门禁一致。
+- 门槛 id 现在可机器校验，且 `tests/test_taxonomy_monophyly.py` 的标注与文档
+  分配给它的门槛一致。
 - 文档已与代码和测试对齐：G5 一行不再声称与 `ape` 置根「字节一致」（断言比的是
-  规范化后的 `(末端, 深度)` 二元组）；G2a/G2b 的说明拆成两条，因为 G2b 确实约束了
+  规范化后的 `(末端名, 深度)` 二元组）；G2a/G2b 的说明拆成两条，因为 G2b 确实约束了
   逐节点最大值；FigTree 可读性契约改引用真实存在的测试 id；`seed` 一节点名多分叉
   解析用的是标准库 `random.Random`，不再承诺「一律经 `numpy.random.Generator`」；
   `data/golden/r3f/example_RRF_rates.nwk` 也补上了 `PROVENANCE.md` 开头对每个文件
@@ -101,7 +125,7 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
 - **极端速率保护**：调整后速率越过阈值带的节点改取最近的未越界祖先的时间（R3F
   语义）。默认阈值 `20.0`，用 `--no-guard` 关闭，受影响节点数以
   `n_rate_guarded_nodes` 记录。
-- **与 R3F 共享的数值处理**：在 R3F 精确相同的位置代入 epsilon，零枝长占比超过
+- **与 R3F 共享的数值保护**：在 R3F 精确相同的位置代入 epsilon，零枝长占比超过
   10% 时发出警告。全部默认值登记在 `openreltime/_constants.py`。
 
 ### 校正与置信区间
@@ -114,10 +138,10 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
   严格解析（不做表达式求值），可与硬边界 `min_bound`/`max_bound` 一同写在制表符分
   隔的 `calibrations.tsv` 中。
 - **节点定位**：可用内部节点 id，也可用某一分类群集合的 MRCA；集合中的成员既可
-  以是末端名，也可以是类群名。
+  以是末端标签，也可以是类群名。
 - **可取消的校正**：`calibrate(..., progress=...)` 的回调返回 `False` 时抛出
   `CalibrationCancelled`。
-- **解析置信区间**（`openreltime.ci`）：msz236 的 delta method（式 7～14）。枝方
+- **解析置信区间**（`openreltime.ci`）：msz236 的 delta 方法（式 7～14）。枝方
   差拆分为抽样分量与速率异质性分量；偏导数由**整条估计管线**的中心差分求得；区间
   在硬边界处截断并在 0 处收口。抽样方差可来自逐枝的 `var` 表、Poisson 近似
   `vS(b) = b/L`，或者完全不给定。
@@ -130,14 +154,14 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
 ### 速率检验、树先验与重采样
 
 - **CorrTest**（`openreltime.corrtest`）：Tao et al. (2019) 的速率自相关统计量，
-  采用已发表的固定系数逻辑回归模型，输出 P 值档位，小树可选 sister 对重抽样，并可
-  选绝对速率锚定。
+  采用已发表的固定系数逻辑回归模型，输出 P 值档位，小树可选姊妹对（sister pair，
+  `--sister-resample`）重抽样，并可选绝对速率锚定。
 - **ddBD**（`openreltime.ddbd`）：估计出生-死亡物种分化树先验（出生率、死亡率、抽
-  样比例），以 SSE/KL 打分的初值网格配合 L-BFGS-B 拟合，可选 anchor 节点与锚定时
+  样比例），以 SSE/KL 打分的初值网格配合 L-BFGS-B 拟合，可选锚点节点与锚定时
   间，并可绘制拟合密度。
 - **轻量自助重采样**（`openreltime.bootstrap`）：对比对做两级位点重采样，复制树由
-  外部 IQ-TREE 可执行文件推断，节点年龄按 clade 聚合为中位数与 2.5/97.5 分位数并
-  附上包含该 clade 的复制比例；运行种子会传给每一次 IQ-TREE 调用。
+  外部 IQ-TREE 可执行文件推断，节点年龄按单系群（clade）聚合为中位数与 2.5/97.5
+  分位数，并附上包含该单系群的复制比例；运行种子会传给每一次 IQ-TREE 调用。
 
 ### 树的读写与分类学工具
 
@@ -146,7 +170,7 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
   带引号的标签不会破坏名称。
 - **外群置根与剔除**（`root_outgroup`）复现 `ape::root(resolve.root = TRUE)` 加
   `ape::drop.tip` 的可观测行为，包括一元节点收缩与根边丢弃；多末端外群需通过完整
-  簇检查，内群至少保留 3 个末端。
+  单系群检查，内群至少保留 3 个末端。
 - **ape cladewise 节点编号**（`PhyloNode.assign_ids`：末端 1..n，内部节点按前序，
   根 = n+1），因此节点表与 `--anchor-node` 取值可与 R3F、ape、MEGA 的输出直接对照。
 - **多分叉处理**：默认报错，也可用零枝长随机二叉化。
@@ -166,7 +190,7 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
   `rates-times`、`calibrate`、`ci`、`corrtest`、`ddbd`）把自己的参数、警告与随机
   种子合并写入 `<prefix>_report.json`，共用同一前缀的每次运行各占一个顶层键；
   `ci` 会重放其 `calibrate` 运行记录下的设置。
-- **全部随机性**（密度抽样、BLB、sister 重抽样）都经由同一个带种子的
+- **全部随机性**（密度抽样、BLB、姊妹重抽样）都经由同一个带种子的
   `numpy.random.Generator`。
 
 ### 使用入口
@@ -186,19 +210,19 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
 
 ### 验证与数据
 
-- **参考工具黄金标准**：R3F 在 274-tip 哺乳动物基准树上的输出
+- **参考工具金标准**：R3F 在 274 分类群哺乳动物基准树上的输出
   （`data/golden/r3f/`）、生成它们的 R 脚本（`reproduce/golden_r3f.R`）、示例输入
   （`data/examples/`）以及逐文件来源记录（`data/PROVENANCE.md`）。
-- **自动化门槛**（`tests/`）：G1 两套约定的 3 与 4 分类群手算值；G2a 与 G2b 274-tip
-  树上的 R3F 速率与时间回归；G2c NEXUS `[&rate=...]` 往返；G3 CLI 与 API 等
-  价；G4 输入校验；G5 与 ape 一致的置根及分类学；G6 相对 R3F 未舍入得分的
+- **自动化门槛**（`tests/`）：G1 两套约定的 3 与 4 分类群手算值；G2a 与 G2b
+  274 分类群树上的 R3F 速率与时间回归；G2c NEXUS `[&rate=...]` 往返；G3 CLI 与 API
+  等价；G4 输入校验；G5 与 ape 一致的置根及分类学；G6 相对 R3F 未舍入得分的
   CorrTest；G7 校正与 CI 行为；G8 ddBD 参数；G9 运行时间测量（记录而不做断言）。
   数值回归测试位于 `tests/test_regressions_engine.py`、
   `tests/test_regressions_calibration_ci.py`、
   `tests/test_regressions_rrf_engine.py` 与
   `tests/test_regressions_treeio_peripherals.py`。
 - **端到端套件**（`e2e_tests/`）：用随包示例数据跑完整 CLI 与 API 流程，并与同一
-  套黄金值比对；随源码包一起发布。
+  套金标准值比对；随源码包一起发布。
 
 ### 文档
 
@@ -213,14 +237,14 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
   修，本引擎不实现该步骤，因此 OpenRelTime 与 MEGA 是高度相关（在已发表基准上约
   0.98～0.99）而非逐节点相同。与 MEGA 比较时请报告相关性。
 - **与参考工具的比对范围限于随包基准树。** CorrTest 与 ddBD 的门槛是相对 R3F 在
-  274-tip 树上已存储输出的回归检查，不能证明在其他拓扑上也一致；速率与时间回归的
+  274 分类群树上已存储输出的回归检查，不能证明在其他拓扑上也一致；速率与时间回归的
   门槛断言的是斜率与*中位*相对偏差，最大值属于测量并报告的观测值，不作断言。
 - **`bootstrap`、`megacc` 与 `viz` 随包交付但没有数值参考门槛。** BLB 与 MEGA-CC
   路径需要外部可执行文件，测试套件并不安装它们；这三个模块的测试覆盖参数传递、输出
-  解析与结构性质。MEGA-CC 的一致性依据已发表的 R3F/MEGA 结果与随包黄金文件确立，而
+  解析与结构性质。MEGA-CC 的一致性依据已发表的 R3F/MEGA 结果与随包金标准文件确立，而
   不是依据新做的头对头运行。
 - **平台。** CI 在 Linux 与 macOS 上跨 Python 3.10～3.13 运行测试套件；Windows 是
-  声明的支持目标，CI 不在该平台运行。所报告的计时来自单台机器，测试套件止于 274-tip
-  黄金树。
+  声明的支持目标，CI 不在该平台运行。所报告的计时来自单台机器，测试套件止于
+  274 分类群金标准树。
 - **外群可选。** `--outgroup` 可以省略；此时树按读入原样使用，其根位置决定所有年龄
   且不发出警告，因此调用方须确认输入树已在预期的单系群上置根（R3F 强制要求外群）。

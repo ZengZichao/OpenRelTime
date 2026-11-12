@@ -128,4 +128,7 @@ are available and answer slightly different questions (see
 | G7 | calibration hitting bounds, joint constraints, conflict detection, effective bounds | pass |
 | G7+ | regression gates: bound-less rows rejected, `RV(R)` positive/saturating, pinned-node intervals, CI follows the calibrated estimator | pass |
 
-Run `python -m pytest tests/` to reproduce.
+Run `python -m pytest tests/` to reproduce.  The complete gate map (G1-G9: what
+each gate asserts, which shipped modules are outside its coverage, and which
+platforms are measured rather than claimed) is in
+[`validation.md`](validation.md).

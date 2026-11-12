@@ -10,7 +10,8 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 
 ## 各子命令支持哪些选项
 
-本表等价于 `openreltime <子命令> --help` 的结果，同时充当下文各条目的快速索引。
+本表等价于 `openreltime <subcommand> --help` 的结果（`<subcommand>` 即子命令名），
+同时充当下文各条目的快速索引。
 除 `blb` 使用 `-o/--output-dir` 之外，所有子命令都有 `-i/--input`、
 `-o/--output` 与 `-h/--help`，表中不再重复。
 
@@ -18,11 +19,11 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `--outgroup` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | – | ✓ | ✓ |
 | `--fmt` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | ✓ | ✓ | – | – |
-| `--resolve` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | ✓ | – | – |
+| `--resolve` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | ✓ | ✓ | – |
 | `--taxon-table` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | ✓ | – | – |
 | `--outgroup-check` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | – | – | – |
 | `--mean` | ✓ | ✓ | ✓ | ✓ | ✓² | – | – | – | – | – | – |
-| `--rate-ratio-threshold` | ✓³ | ✓ | ✓ | ✓ | ✓² | – | – | – | – | – | – |
+| `--rate-ratio-threshold` | ✓³ | ✓ | – | ✓ | ✓² | – | – | – | – | – | – |
 | `--no-guard` | – | ✓ | – | ✓ | ✓² | – | – | – | – | – | – |
 | `--normalize` | – | ✓ | ✓ | – | – | – | – | – | – | – | – |
 | `--r3f-compat` | – | ✓ | ✓ | – | – | – | – | – | – | – | – |
@@ -49,7 +50,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 方式（见 `calibrated`）。
 ² 覆盖 `calibrate` 记录的值（见 `mean`、`rate_ratio_threshold`）；不指定即“沿用
 记录值”。
-³ 速率计算过程会**忽略**这个选项——见 `rate_ratio_threshold`。
+³ 该选项会被接受但**不生效**——速率计算过程会忽略它——见 `rate_ratio_threshold`。
 ⁴ 对 `megacc` 是可选项：不给时，桥接只按枝长运行 RelTime。
 
 ---
@@ -61,11 +62,11 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 * 默认：`"newick"`（`openreltime.read_tree(path, fmt="newick")`；CLI 的
   `--fmt` 同样默认 `newick`，且只接受这两个值）。
 * NEXUS 文件可携带 `[&rate=...]` 注释（R3F 与 FigTree 的方言）；读入时保留这些
-  注释，写出时重新生成。
+  注释而非被剥掉，写出时重新生成（门槛 G2c 在 R3F 金标准 NEXUS 上断言这一往返一致）。
 
 ### 输出树格式——只有 `.nexus` 带速率注释
 * `to_newick()`（以及所有 `*_timetree.nwk` / `*_calibrated.nwk` 产物）写出的是
-  **纯 Newick**：枝长或定标后的时长、末端名，**不含任何 `[&rate=...]` 注释**。
+  **纯 Newick**：枝长或校正后的时长、末端标签，**不含任何 `[&rate=...]` 注释**。
   Newick 没有存放它们的标准位置，所以 `.nwk` 不是带速率注释的产物，FigTree 打开
   它只能看到时间。
 * `write_nexus()`（即 `*.nexus` 产物）才是带注释的产物，也是 FigTree 读取速率的
@@ -86,16 +87,16 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 * 软件在外群的 MRCA 处置根，随后删除外群末端，输出仅含内群末端。行为与
   `ape::root(resolve.root=TRUE)` 加 `ape::drop.tip` 一致（ADR-004）。
 * 建议：使用 1～5 个演化较慢、构成单系群的分类群。
-* 两种写法：**单个末端**，或**多个末端**且必须构成完整簇（见
+* 两种写法：**单个末端**，或**多个末端**且必须构成完整单系群（见
   `outgroup_check`）。不是末端名的记号会按**类群名称**解析（经 `taxon_table`
   或末端标签前缀自动识别），并展开为该名称的全部成员。
 * 省略该选项不会触发任何警告，而所有 RelTime 量都锚定在根上：输入文件的根位置
   直接决定全部节点年龄。请务必自行确认拓扑（`docs/validation-zh.md` §5）。
 
 ### `taxon_table` — 末端分类信息
-* 类型：`None` 或 `{类群: [末端, ...]}` 映射（API：
+* 类型：`None` 或 `{group: [tip, ...]}` 映射（键为类群名，值为该类的末端列表；API：
   `openreltime.parse_taxon_table(path)`；CLI：`--taxon-table PATH`）。
-* TSV 或 CSV，含一列末端名（`tip`、`label`、`name` 等）与一列类群名（`group`、
+* TSV 或 CSV，含一列末端标签（`tip`、`label`、`name` 等）与一列类群名（`group`、
   `clade`、`taxa`、`classification` 等）；两个表头都识别不出时，第一列为末端、
   第二列为类群。不给表时，软件按末端标签前缀自动识别类群（`Genus_species` →
   `Genus`）。
@@ -103,7 +104,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 
 ### `outgroup_check` — 多末端外群的完整性检查
 * 取值：`"error"`（默认）或 `"warn"`。CLI：`--outgroup-check`。
-* 多末端外群必须是完整簇：外群 MRCA 之下的所有末端都要属于该外群。
+* 多末端外群必须是完整单系群：外群 MRCA 之下的所有末端都要属于该外群。
   `"error"` 抛出 `ValueError` 并列出多余末端；`"warn"` 记录警告，并仍以 MRCA
   置根。单末端外群天然完整，不做检查。
 
@@ -114,8 +115,8 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   `outgroup_check` 同一判据）。
 * `--groups` 指定要检验的类群（默认检验分类信息中的全部类群）；`--tips` 改为
   检验一个临时给定的末端集合。两者可各自独立地收窄检验范围。
-* `--group-sep REGEX`——自动识别标签前缀时使用的分隔模式，默认取 `_`、`|`、
-  `@`、空白中的第一个。仅在未提供 `--taxon-table` 时有意义。
+* `--group-sep REGEX`——自动识别标签前缀时使用的分隔模式，不传（`None`）时默认在标签中
+  **最先出现**的 `_`、`|`、`@` 或空白处切分。仅在未提供 `--taxon-table` 时有意义。
 * 写出 `<prefix>_monophyly.csv`（列 `group`、`n_tips`、`is_monophyletic`、
   `n_mrca_tips`、`extra_tips`、`missing_names`、`tips`）；对非单系类群，另外在
   stderr 记录警告。`missing_names` 列出请求了但树中不存在的名称。
@@ -141,10 +142,10 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   `rrf_rates_times` 为 `20.0`。CLI：`--rate-ratio-threshold` 或 `--no-guard`
   （关于 `rates` 的特别说明见下）。
 * 前序调整之后，若某节点的调整后速率超过阈值（或低于阈值的倒数），软件会把该
-  节点的时间替换为最近的未超限祖先节点的时间（R3F 语义）。`None` 关闭保护。
-* **保护只属于时间计算过程。** `rrf_rates` 保留该关键字只为与 `rrf_times` 签名
-  对称，从不应用这个关键字：R3F 参考实现只在重写节点时间的那一步设保护
-  （`rrf_times.R` 353～373 行），而 `rrf_rates.R` 既无保护也无时间可重写。因此
+  节点的时间替换为最近的未超限祖先节点的时间（R3F 语义）。`None` 关闭速率比保护。
+* **速率比保护只属于时间计算过程。** `rrf_rates` 保留该关键字只为与 `rrf_times` 签名
+  对称，从不应用这个关键字：R3F 参考实现只在重写节点时间的那一步设速率比保护
+  （`rrf_times.R` 353～373 行），而 `rrf_rates.R` 里没有可供重写的时间。因此
   给 `rrf_rates` 传数值会记录一条警告，该警告同时进入 `RateResult.warnings` 与
   `<prefix>_report.json`。`openreltime rates --rate-ratio-threshold` 走的正是这
   条代码路径。
@@ -168,7 +169,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   不可行的约束集会抛出 `ValueError` 并给出逐节点诊断；若算出的可行因子是非有限
   值，同样报错，而不会把 `f = inf` 传播进每一个绝对年龄。只给密度、不给硬边界
   的行在 `method="bounds"` 下不构成任何约束，解析校正表时会拒绝该行（改用
-  `--method effective`，或补上 `min_bound` 与 `max_bound`）。
+  `--method effective`，或补上 `min_bound` 或 `max_bound`）。
   * **只给单侧边界时取它的有限边界**：表中只有下界时 `f = max(min/t)`，只有上界时
     `f = min(max/t)`，于是被约束钉住的那个节点**恰好**落在你给的边界上。该边界是你
     给的年龄除以节点相对时间，因此解对**边界的时间单位保持不变**——同一物理约束用 Ma
@@ -176,7 +177,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
     子下限夹到 `1.0` 的做法：那个常数属于无量纲的 RRF 相对尺度，而不是你的时间单位，
     于是一个要求树比未校正解*更年轻*的下界被静默忽略，而高于未校正解的上界反而把整棵
     树的每个年龄都抬高。
-  * **收敛后的年龄会被重新对照树的拓扑检查。** 违反修复循环每轮只检查当轮最严重的违
+  * **收敛后的年龄会被重新对照树的拓扑检查。** 违反循环每轮只检查当轮最严重的违
     反者，因此它可能在“后代仍比祖先更老”或“树里出现负年龄”的情况下就宣布收敛；循环结束
     后，所有输出的节点年龄会被检查非负性与嵌套关系，不通过就抛出 `ValueError` 并点名具
     体节点 id。此时不写出任何结果，也不会只给一条警告就把解返回给你。
@@ -201,8 +202,9 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
     `<prefix>_monophyly.csv`，没有报告块可记；
   * 有效边界的密度抽样（`method="effective"`）用 `numpy.random.default_rng(seed)`，
     记录在 `calibrate` 块；
-  * CorrTest 的 sister 分支重抽样（`sister_resample > 0`）用
-    `numpy.random.default_rng(seed)`，记录在 `corrtest` 块；
+  * CorrTest 的姊妹枝（sister branch；API `sister_resample > 0`，CLI
+    `--sister-resample`）重抽样用 `numpy.random.default_rng(seed)`，记录在
+    `corrtest` 块；
   * BLB 的重抽样与每次 IQ-TREE 的 `-seed` 用 `numpy.random.default_rng(seed)`，
     记录在 `blb_report.json`。
 * `ci` 没有自己的种子：它用所跟随的那次 `calibrate` 运行记录的 `seed` 重新读
@@ -225,7 +227,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 端标签前缀自动识别解析）。一旦某个 `taxon_set` 在内群树上判定为非单系，软件就记
 录一条警告，并用该 `taxon_set` 末端的 MRCA 作为校正节点。
 
-参数一律按严格的键值对解析，绝不做表达式求值。
+参数一律严格按键/值**数值**解析，绝不做表达式求值。
 
 **每一行都必须构成约束。** 解析阶段会拒绝既无 `min_bound` 又无 `max_bound`（也没
 有密度）的行，并报出出错的行号——否则这一行会把全局因子 `f` 推向 `inf`，让每一
@@ -238,16 +240,17 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 ### `calibrated`、CLI `-c` 与 `--calibrated`
 * 输入是 `CalibratedResult`（API），或**上一次 `openreltime calibrate` 运行的
   输出前缀**（CLI）。CLI 会从 `<prefix>_report.json` 读回树、外群、输入格式、多
-  分叉处理与外群检查方式，使区间与它所定性的那次估计保持一致；找不到报告或原始
+  分叉处理与外群检查方式，使区间与它所界定的那次估计保持一致；找不到报告或原始
   树文件时，CLI 给出可读的错误。
-* 一套估计器贯穿始终：求导管线复现点估计**实际使用**的平均约定（`mean`）、速率
-  比保护以及校正边界。`method="effective"` 的结果沿其有效边界求导（msz236 正是
-  把有效边界当作约束），`mean="arithmetic"` 的结果沿算术平均的导数求导。`method`
-  取 `bounds` 与 `effective` 之外的值会报错；没有有效边界的 effective 结果（例如
+* 一套估计器贯穿始终：求导管线复现点估计**实际使用**的平均约定（`mean`）、速率比
+  保护阈值（`rate_ratio_threshold`）以及校正边界。`method="effective"` 的结果沿
+  其有效边界求导（msz236 正是把有效边界当作约束），`mean="arithmetic"` 的结果沿
+  算术平均的导数求导。`method` 取 `bounds` 与 `effective` 之外的值会报错；没有
+  有效边界的 effective 结果（例如
   `n_effective < 2`）同样报错。
 * 输出 `<prefix>_ci.csv` 每个内部节点一行：`node_id`、`label`、`time`、`se`、
   `lower`、`upper`、`width`、`se_reliable`、`notes`。凡区间**不是**来自 msz236
-  eq (7) 的枝方差分解的行，`se_reliable` 为 `False`，并由 `notes` 说明原因（校正
+  式 (7) 的枝方差分解的行，`se_reliable` 为 `False`，并由 `notes` 说明原因（校正
   边界钉住、求解器未满足约束、下界截到 0）。这类节点的数量在报告 JSON 中记为
   `n_nodes_se_not_reliable`。
 
@@ -255,7 +258,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 * 默认：三者皆为 `None`（`ci.py:confidence_interval`）。`None` 不是一个方差取值，
   而是表示“未提供该来源”。什么都不提供时，回退产生的才是零方差，它不是默认值。
 * 行为——按优先级取第一个被提供的来源：
-  1. 显式 `branch_var` 字典 `{子节点 id: 方差}`；
+  1. 显式 `branch_var` 字典 `{child node id: variance}`（键为子节点 id，值为方差）；
   2. Poisson 近似 `vS(b) = b/L`，`L = seq_length`，否则 `L = n_sites`（先检查
      `seq_length`，同时给定时以 `seq_length` 为准）；
   3. 三者都为 `None`（默认调用）时 `vS(b) = 0`，区间因此只含速率异质性方差
@@ -273,28 +276,29 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   把 `RV(R)` 分配到各条枝上，这个比值与尺度无关，但 `vS(b) = b/L` 与导数
   `dt_i/db_j` 并非如此，所以区间的**绝对**宽度会跟随输入枝长的单位。估计量是文献
   给出的那一个，此处不做改动；作为替代，`openreltime ci` 会在最长枝落在
-  0.02–5 每位点置换之外时每次调用只发出一次警告。*相对*半宽（`width / (2 * time)`）
+  0.02–5 每位点置换数之外时每次调用只发出一次警告，这正是以“每位点”为单位的树所
+  处的范围。*相对*半宽（`width / (2 * time)`）
   与单位无关，是跨树比较时可以放心使用的量。
 
 ### 速率异质性分量 `RV(R)`（不由用户设定）
-* `RV(R) = max(Vobs(R) - SV(R)/N, 0)`，取在 msz236 eq (9) 的**逐谱系**尺度上：
+* `RV(R) = max(Vobs(R) - SV(R)/N, 0)`，取在 msz236 式 (9) 的**逐谱系**尺度上：
   `SV(R)` 是跨 `N` 个谱系的求和，因此要先除以 `N` 再与逐谱系平均值 `Vobs(R)`
-  相减。直接拿原始和去减一个平均值，会让软件在任何真实树上都把 `RV(R)` 夹到 0，
-  整个异质性分量随之消失。
+  相减。早期实现曾直接拿原始和去减一个平均值，在任何真实树上都把 `RV(R)` 夹到 0，
+  并静默丢弃整个异质性分量。
 * `Vobs(R)`、`SV(R)`、`RV(R)` 在报告 JSON 中记为 `Vobs_R`、`SV_R`、`RV_R`；
   method 字符串还会回显所用的抽样方差来源、被复现的 `method` 与 `mean`。
 * 当 `SV(R)/N > Vobs(R)`（抽样主导的树：位点数相对于观测速率离散太少）时
   `RV(R)` 夹到 0，`v(b) = vS(b)`，并发出警告说明——此时区间只反映抽样噪声。
 * 年龄恰好等于该节点自身约束不动点的节点（硬边界上，或可行区间中点）通过
-  eq (7) 的导数恒为 0。这类节点不再报告“零不确定度”，而是给出该节点校正本身断
+  式 (7) 的导数恒为 0。这类节点不再报告“零不确定度”，而是给出该节点校正本身断
   定的不确定度（有效边界、密度分位数，或用户给定的 min 与 max），并标记
   `se_reliable = False`。
 
 ## CorrTest（`corrtest`）
 
 ### `sister_resample`
-* 默认 `0`。末端数少于约 50 的树应使用 ≥ 50 次 sister 对分配重抽样；取抽样间
-  Spearman rho 的均值（R3F 行为）。
+* 默认 `0`。末端数少于约 50 的树应使用 ≥ 50 次姊妹对（sister pair）分配
+  重抽样；取抽样间 Spearman rho 的均值（R3F 行为）。
 
 ### `anchor_node`、`anchor_time`
 * 默认：`anchor_node=None`、`anchor_time=0.0`（`corrtest.py:corrtest`）。
@@ -308,7 +312,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   进报告。
 
 ### 参考值与精度（不由用户设定）
-* 门 G6 与 R3F 在随包基准树上的 CorrScore 比较。R3F 只打印
+* 门槛 G6 与 R3F 在随包基准树上的 CorrScore 比较。R3F 只打印
   `format(score, digits = 5)`，所以
   `data/golden/r3f/example_sr0_corrtest.txt` 里是 `0.9996`；未舍入的参考值
   `0.99959505940763882` 存于
@@ -339,20 +343,20 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   从 1 开始；`0` 是 R3F 的“不设锚点”哨兵，不是本项目的合法 id），非内部节点的
   id 抛 `KeyError`。
 * 给定锚点时，软件缩放相对时间，使该节点具有指定年龄。为数值稳定，请保持最大锚
-  点年龄 ≤ 10 个时间单位（R3F 建议）。
+  点时间 ≤ 10（R3F 建议）。
 
 ### `measure`
 * `"SSE"`（默认）或 `"KL"`：初值网格的打分准则。网格：出生率 1.1～10.1 步长 1，
   死亡率 1～10 步长 1，抽样比例 {0.001, 0.01, 0.1, 0.5, 0.9}，并过滤为
-  birth ≥ death；用 L-BFGS-B 在 birth-death 似然上优化，按打分顺序尝试初值
+  birth ≥ death；用 L-BFGS-B 在出生-死亡似然上优化，按打分顺序尝试初值
   （最多 50 个）。
 
 ## BLB（`blb`）
 
 ### `gamma`
 * 默认 `0.7`，允许范围 [0.6, 0.9]：子采样规模 `ceil(L**gamma)`。
-* 默认值落在已发表 RelTime-JA 抽样器的许可范围*之内*（`lb_sampler.R` 第 4
-  行）；但它**不**是那次已发表运行所用的取值。该运行使用 `g = 0.78`、`20` 个
+* 默认值落在 RelTime-JA 抽样器许可范围*之内*（`lb_sampler.R` 第 4 行）；但它**不**
+  是那次已发表运行所用的取值。该运行使用 `g = 0.78`、`20` 个
   子采样乘 `20` 个复制（`lbs_codelines.r` 第 14 行），而 OpenRelTime 的默认是
   `0.7` 与 `10 x 10`。因此默认值复现的是*方法*，不是那个具体的已发表协议（见
   `docs/validation-zh.md`）。
@@ -409,6 +413,6 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 | `EPS_R3F_SMALL` | 1e-20 | 在 R3F 写 `1e-20` 的位置使用的零枝替代值 | `rrf_times.R` |
 | `ZERO_BRLEN_WARN_FRACTION` | 0.10 | 触发警告的零枝占比 | `rrf_times.R:67` |
 | `RATE_RATIO_THRESHOLD` | 20.0 | `rrf_times` 与 `rates-times` 使用的速率比保护阈值；`rate_ratio_threshold` 唯一注册的默认值 | `rrf_times.R:354-356` |
-| `RATE_RATIO_GUARD_DISABLED` | `None` | 关闭保护的哨兵值；纯速率计算过程不运行保护 | `rrf_rates.R:250-336` 对比 `rrf_times.R:353-373` |
+| `RATE_RATIO_GUARD_DISABLED` | `None` | 关闭速率比保护的哨兵值；纯速率计算过程不运行速率比保护 | `rrf_rates.R:250-336` 对比 `rrf_times.R:353-373` |
 | `CALIBRATION_MAX_ITER` | 100 | 上报冲突校正之前，违反传播的轮数上限 | msz236 与 R3F |
-| `EFFECTIVE_BOUNDS_REPLICATES` | 10,000 | 有效边界过程的复制数 | msz236 |
+| `EFFECTIVE_BOUNDS_REPLICATES` | 10_000 | 有效边界过程的复制数 | msz236 |

@@ -50,10 +50,10 @@ pip install --editable ".[dev,plot]"
 
 本包无编译扩展，在 Linux、macOS 与 Windows 上安装都只需数秒。
 
-### 1.2 在检出目录之外使用源码
+### 1.2 基于源码检出（checkout）工作
 
 对检出的源码目录（checkout）做**可编辑安装**，是在仓库之外运行分析、基准测试或绘
-图脚本时的推荐做法：可编辑安装完成后，检出的源码目录（即 `openreltime` 这个包，
+图脚本时的官方支持的做法：可编辑安装完成后，检出的源码目录（即 `openreltime` 这个包，
 以及 `openreltime`、`ort` 两个命令行入口）在任意工作目录下均可导入，脚本直接写
 
 ```python
@@ -73,12 +73,12 @@ python -c "import openreltime; print(openreltime.__version__, openreltime.__file
 
 ### 2.1 系统树（必需）
 
-带枝长的**有根二叉** Newick（或 NEXUS）树，枝长单位为每位点替换数（IQ-TREE、
+带枝长的**有根二叉** Newick（或 NEXUS）树，枝长单位为每位点期望置换数（IQ-TREE、
 RAxML 与 FastTree 的输出可直接使用）。要求：
 
 - 至少 3 个内群分类群；
 - 枝长非负且有限；缺失枝长按 0 处理（会给出警告）；
-- 多分叉节点默认报错；`--resolve random` 可随机二叉化（新增枝长置 0）。
+- 多分叉节点默认报错；`--resolve random` 可随机二叉化（新增枝长置 0，会记录在日志）。
 
 ### 2.2 外群（推荐）
 
@@ -92,31 +92,32 @@ RAxML 与 FastTree 的输出可直接使用）。要求：
 --outgroup Ornithorhynchus_anatinus
 # 多末端
 --outgroup "Ornithorhynchus_anatinus,Zaglossus_bruijni,Tachyglossus_aculeatus"
---outgroup outgroup.txt
+--outgroup outgroup.txt      # 每行一个名称
 ```
 
 **不提供外群时**：该选项可以省略，此时既不置根也不剔除，树按读入原样使用。
 RelTime 的一切量都锚定在根上，输入文件的根位置因此直接决定所有节点年龄，而
-OpenRelTime 对此**不做任何警告**。请务必确认输入树已按预期的单系群置根（R3F 强制
+OpenRelTime 对此**不做任何警告**。请务必确认输入树已按预期的单系群（clade）置根（R3F 强制
 要求外群；见 `docs/validation-zh.md` §5）。
 
-**完整簇检查**：多末端外群必须构成一个完整的簇（单系群）——回溯到这些分支的最
-近共同祖先（MRCA）后，该祖先下的**所有**末端都必须属于所指定的外群。若 MRCA 下
-还混入了未指定的末端，软件默认报错并列出这些多余末端（`--outgroup-check warn`
-可降级为警告并继续，置根位置仍为 MRCA）。单末端外群天然完整，不做此检查。
+**完整单系群检查**：多末端外群必须构成一个完整的单系群（complete clade）
+——回溯到这些分支的最近共同祖先（MRCA）后，该祖先下的**所有**末端都必须属于
+所指定的外群。若 MRCA 下还混入了未指定的末端，软件默认报错并列出这些多余末端
+（`--outgroup-check warn` 可降级为警告并继续，置根位置仍为 MRCA）。单末端外群
+天然完整，不做此检查。
 
 **按单系群名称指定外群**：`--outgroup` 的每个名称先按末端名匹配；若不是末端名，
-则按类群名称解析（见 §2.4 分类信息），展开为该群全部末端并做同样的完整簇检查：
+则按类群名称解析（见 §2.4 分类信息），展开为该群全部末端并做同样的完整单系群检查：
 
 ```bash
 --outgroup Monotremata --taxon-table taxa.tsv
 ```
 
-### 2.3 校正文件（calibrate 子命令需要）
+### 2.3 校正（用于 `calibrate`）
 
 制表符分隔的 TSV（见 §4），或 Python 端构造
-`openreltime.Calibration` 对象列表。`taxon_set` 中除末端名外也可写类群名（先查
-`--taxon-table`，再尝试末端标签前缀自动识别）；若该类群经判断不是单系群，软件会
+`openreltime.Calibration` 对象列表。`taxon_set` 中除末端标签外也可写类群名（经
+`--taxon-table` 解析，未提供该表时改按末端标签前缀自动识别；见 §2.4）；若该类群经判断不是单系群，软件会
 发出警告，并仍以该 MRCA 为校正节点。
 
 ### 2.4 末端分类信息（单系性判断）
@@ -149,7 +150,7 @@ openreltime rates-times -i tree.nwk --outgroup og.txt -o mam --plot mam_tree.png
 - `--normalize`：将最大节点时间归一为 1.0（MEGA 与 PNAS 2012 语义）；
 - `--mean geometric|arithmetic`：选择平均约定；几何平均与 R3F 一致，也是各处
   的默认值；
-- `--no-guard`：关闭速率比阈值保护（默认 20，与 R3F 相同）；
+- `--no-guard`：关闭极端速率保护（阈值默认 20，与 R3F 相同）；
   `--rate-ratio-threshold FLOAT`：设定该阈值。该保护只作用于**时间**计算过程：
   `rates` 出于签名对称而接受 `--rate-ratio-threshold`，但会忽略这个参数，并记录
   一条警告说明此事；
@@ -169,12 +170,13 @@ openreltime calibrate -i tree.nwk -c calibrations.tsv --outgroup og.txt \
 
 - `--method bounds`（默认）：`min` 与 `max` 硬边界；全局因子 f 取可行域中点，而
   只给下界或只给上界的校正表直接取那条有限边界（节点恰好落在该边界上，且与你使用的
-  时间单位无关）；无法满足时按谱系速率缩放迭代调整（上限 100 次），仍不可行则报错并
-  列出冲突节点；若收敛解仍然存在负年龄、或后代比祖先更老，软件会报错并点名这些节点，
+  时间单位无关）；无法满足时沿该谱系**按比例**缩放速率，并向其**全部后代**传播，
+  迭代调整（上限 100 次），仍不可行则报错并列出冲突节点；若收敛解仍然存在负
+  年龄、或后代比祖先更老，软件会报错并点名这些节点，
   而不是只留下警告；
 - `--method effective`：密度校正按 msz236 抽样转换，`--n-effective` 控制复制数
-  （默认 10,000），输出有效边界表 `<prefix>_effective_bounds.csv` 与各节点经验
-  分位区间。只给密度而不给硬边界的行在 `bounds` 下不构成任何约束，解析阶段会
+  （默认 10,000），输出有效边界表 `<prefix>_effective_bounds.csv` 与各节点的经验
+  年龄分位区间。只给密度而不给硬边界的行在 `bounds` 下不构成任何约束，解析阶段会
   拒绝这类行，因此这类行必须改用 `effective`；
 - `--mean`、`--rate-ratio-threshold`、`--no-guard`：决定被校正的那次 RRF 估计。
   传入的取值都会写入报告，`openreltime ci` 会重放这些取值，从而保证置信区间与
@@ -191,15 +193,16 @@ openreltime ci -c mam_cal --n-sites 1000 -o mam_ci
   处理方式都从 `<prefix>_report.json` 读回；
 - `--branch-var var.tsv`：用户提供每条边的抽样方差（只含 `node_id`、`var`
   两列）；
-- `--n-sites L`：Poisson 近似 `vS(b)=b/L`；
+- `--n-sites L`：Poisson 近似 `vS(b) = b/L`；
 - 两者都不给时仅含速率异质性方差（msz236 模拟协议）；
-- `--level 0.95`：置信水平；CI 会在硬边界处截断，并把可能为负的下界截到 0；
+- `--level`：设定置信水平（默认 0.95）；CI 会在硬边界处截断，并把可能为负的
+  下界截到 0；
 - `--mean`、`--rate-ratio-threshold`、`--no-guard`：覆盖 `calibrate` 记录的
   设置。不指定时，区间沿产生该点估计的同一估计器求导——`--method effective`
   的结果也按其有效边界求导；
 - `<prefix>_ci.csv` 的列为 `node_id, label, time, se, lower, upper, width,
-  se_reliable, notes`。节点年龄若恰好钉在自身校正上，该节点的 eq-(7) 导数恰为
-  0，因此软件改按该校正本身断定的不确定度报告，并标记
+  se_reliable, notes`。节点年龄若恰好钉在自身校正上，该节点的 delta 方法（微分法）导数
+  恰为 0，因此软件改按该校正本身断定的不确定度报告，并标记
   `se_reliable=False`；`notes` 说明原因，报告 JSON 中以 `n_nodes_se_not_reliable`
   计数。
 
@@ -207,24 +210,23 @@ openreltime ci -c mam_cal --n-sites 1000 -o mam_ci
 
 ```bash
 openreltime corrtest -i tree.nwk --outgroup og.txt -o mam
-# 小树（<50 tips）建议重抽样：
+# 小树（末端数 < 50）建议重抽样：
 openreltime corrtest -i tree.nwk --outgroup og.txt --sister-resample 100 --seed 1 -o mam
 ```
 
 输出 `<prefix>_corrtest.txt`：CorrScore ∈ [0,1] 与 P 值档位
 （≥0.92 → P<0.001；[0.83,0.92) → P<0.01；[0.5,0.83) → P<0.05；<0.5 →
-P>0.05）。CorrScore ≥ 0.5 即提示存在显著的速率自相关，RelTime 类方法的
-对数速率假设可能不成立。
+P>0.05）。CorrScore ≥ 0.5 即提示存在显著的速率自相关。
 
 ### 3.5 ddBD 物种分化树先验
 
 ```bash
 openreltime ddbd -i tree.nwk --outgroup og.txt --anchor-time 1.85 -o mam_bd
-openreltime ddbd -i tree.nwk --outgroup og.txt --sampling-frac 0.5 -o mam_bd
+openreltime ddbd -i tree.nwk --sampling-frac 0.5 -o mam_bd
 ```
 
-- `--anchor-node N --anchor-time T`：把某内部节点的相对时间标定为 T
-  （时间单位建议使最大节点年龄 ≤ 10）；
+- `--anchor-node N --anchor-time T`：以节点 N 为锚点，为它指定**绝对**时间 T，
+  用来重缩放全树的相对时间（时间单位建议使最大节点年龄 ≤ 10）；
 - `--measure SSE|KL`：初值网格选择准则；
 - `--sampling-frac 0.5`：设定**报告**的抽样比例。与 R3F 一致，似然优化始终把
   rho 留在自由参数中（边界 (0,1)），给定值只替换报告中写出的抽样比例，并不约束
@@ -232,8 +234,8 @@ openreltime ddbd -i tree.nwk --outgroup og.txt --sampling-frac 0.5 -o mam_bd
   `sampling_frac_fitted` 中查看；
 - `--plot curve.png`：输出节点时间分布直方图与拟合密度曲线。
 
-输出表：`birth.rate / death.rate / sampling.frac`，可直接作为 MCMCTree 与
-BEAST 的树先验参数。
+输出表 `<prefix>_ddbd.txt` 的列为 `birth.rate / death.rate / sampling.frac`，
+可作为 MCMCTree/BEAST 树先验的参考参数（速率以锚定节点的时间单位计）。
 
 ### 3.6 tree2table
 
@@ -244,7 +246,7 @@ openreltime tree2table -i tree.nwk --time -o mam_tbl   # 节点年龄表
 
 ### 3.7 单系性判断（monophyly）
 
-判断类群是否为单系群（完整簇）。分类信息来自 `--taxon-table` 或末端标签自动识
+判断类群是否构成完整的单系群。分类信息来自 `--taxon-table` 或末端标签自动识
 别；`--groups` 指定要检验的类群名（默认检验全部），`--tips` 可检验任意末端集合：
 
 ```bash
@@ -272,11 +274,11 @@ openreltime blb -a alignment.fasta --iqtree /path/to/iqtree \
     --iqtree-arg=-m --iqtree-arg=GTR+G --seed 42 -o blb_out
 ```
 
-两级重采样：① 无放回抽取 ⌈L^0.7⌉ 个位点；② 每个子采样内有放回重抽 L 个位点。
-其后是 IQ-TREE 建树、OpenRelTime 定时，最后按节点 clade 聚合，给出中位时间以及
-2.5% 与 97.5% 分位区间（`blb_out/blb_summary.csv`）。
+两级重采样：① 无放回抽取 ⌈L^gamma⌉ 个位点（示例中 gamma = 0.7）；② 每个子采样
+内有放回重抽 L 个位点。其后是 IQ-TREE 建树、OpenRelTime 定时，最后按节点单系群
+聚合，给出中位时间以及 2.5% 与 97.5% 分位区间（`blb_out/blb_summary.csv`）。
 
-`topology_ok` 列给出包含该 clade 的复制比例，`blb_replicates.csv` 保留全部复制
+`topology_ok` 列给出包含该单系群的复制比例，`blb_replicates.csv` 保留全部复制
 的逐棵树结果。`--workdir` 用于保留中间的重采样比对与树（默认写入临时目录并在结
 束后删除）；`--seed` 同时以 `-seed` 传给每一次 IQ-TREE 运行。默认
 `--gamma 0.7`、`10 x 10` 落在 BLB 许可范围内，但**不**复现已发表的 RelTime-JA
@@ -297,7 +299,7 @@ RelTime），`--mao custom.mao` 可用手写的控制文件替代生成文件。
 可解析的输出，运行会直接报错——绝不会拿 OpenRelTime 自己的估计冒充 MEGA 结果。
 
 桥接有两个限制。第一，它需要真实的 `megacc` 可执行文件，CI 既不安装也不运行该程
-序，因此 MEGA-CC 的一致性依据已发表的 R3F/MEGA 结果与随包黄金文件确立，而不是依据
+序，因此 MEGA-CC 的一致性依据已发表的 R3F/MEGA 结果与随包金标准文件确立，而不是依据
 此处新做的头对头实测。第二，OpenRelTime 的解析 RRF 层缺少 MEGA 的
 似然比精修，与 MEGA 的逐节点差异属预期之内。把它当作对照工具，不要当作等价性声
 明（见 `docs/validation-zh.md`）。
@@ -305,7 +307,8 @@ RelTime），`--mao custom.mao` 可用手写的控制文件替代生成文件。
 ## 4. 校正文件格式
 
 制表符分隔（示例见 `data/examples/example_calibrations.tsv`——**仅演示文件格
-式**，其中的数值是随意填写的示意值，见 `data/examples/README-zh.md`）。示例与黄金
+式**，其中的数值是随意填写的示意值，见 `data/examples/README-zh.md`）。示例与
+金标准
 数据随源码分发（sdist）发布，也随可编辑安装的源码目录（`data/`、`MANIFEST.in`）发
 布；纯 wheel 不含它们，请在源码目录内运行示例。首行为表头；每行都含六个制表符分隔
 字段（`.` 表示空单元格）。
@@ -313,9 +316,9 @@ RelTime），`--mao custom.mao` 可用手写的控制文件替代生成文件。
 | 列 | 必需 | 说明 |
 |---|---|---|
 | `node_id` | 二选一 | 内部节点 id（同 `<prefix>_times.csv` 的 NodeId） |
-| `taxon_set` | 二选一 | `\|` 分隔的末端名，或单个类群名（`--taxon-table` 或自动识别，见 §2.4），取其 MRCA；类群经判断非单系时发出警告 |
+| `taxon_set` | 二选一 | `\|` 分隔的末端标签，或单个类群名（`--taxon-table` 或自动识别，见 §2.4），取其 MRCA；类群经判断非单系时发出警告 |
 | `min_bound` | 至少给一个边界或密度 | 最小年龄；`.` 表示缺失 |
-| `max_bound` | | 最大年龄；`.` 表示缺失 |
+| `max_bound` | | 最大年龄 |
 | `density` | 可选 | `uniform`、`exponential`、`normal` 和 `lognormal` |
 | `density_params` | 密度时必需 | `key=value;key=value`，如 `offset=60;mean=20` |
 
@@ -329,7 +332,7 @@ RelTime），`--mao custom.mao` 可用手写的控制文件替代生成文件。
 |---|---|---|
 | `_rates.csv` | `rates` | NodeLabel、NodeId、Des1、Des2、Rate |
 | `_rates.nwk` | `rates` | 以枝注释携带速率的同一棵树 |
-| `_times.csv` | `times` | 同上，列为 Time |
+| `_times.csv` | `times` | 同上，并追加 `Time` 列 |
 | `_timetree.nwk` | `times` | 相对时间树（枝长 = 父子时间差） |
 | `_rates_times.csv` | `rates-times` | Rate 与 Time 两列 |
 | `_timetree.nexus` | `rates-times` | 带 `[&rate=...]` 注释，FigTree 可直接打开 |
@@ -339,9 +342,8 @@ RelTime），`--mao custom.mao` 可用手写的控制文件替代生成文件。
 | `_calibrated.csv/.nwk/.nexus` | `calibrate` | 绝对时间树与表 |
 | `_effective_bounds.csv` | `calibrate --method effective` | 有效边界（msz236）与经验分位区间 |
 | `_ci.csv` | `ci` | node_id、label、time、se、lower、upper、width、se_reliable、notes |
-| `_corrtest.txt` | `corrtest` | CorrScore 与 P 值档位 |
-| `_ddbd.txt` | `ddbd` | BD 参数 |
-| `blb_summary.csv`、`blb_replicates.csv` | `blb` | 逐 clade 汇总；全部复制表 |
+| `_corrtest.txt` / `_ddbd.txt` | `corrtest` / `ddbd` | CorrScore 与 P 值档位 / BD 参数 |
+| `blb_summary.csv`、`blb_replicates.csv` | `blb` | 逐单系群汇总；全部复制表 |
 | `_megacc_times.csv` | `megacc` | MEGA-CC 节点时间，含 `source` 列 |
 | `_report.json` | 见下 | 全部运行参数、警告与随机种子 |
 
@@ -366,12 +368,12 @@ bd    = ort.ddbd(tree, anchor_time=1.85, measure="SSE")
 table = ort.tree2table(tree, time=False)
 
 # 单系性判断（分类表或末端标签前缀自动识别）
-table_map  = ort.parse_taxon_table("taxa.tsv")
-verdict    = ort.check_monophyly(tree, ["Mus_musculus", "Mus_spretus"], name="Mus")
+table_map = ort.parse_taxon_table("taxa.tsv")                # {类群: [末端...]}
+verdict = ort.check_monophyly(tree, ["Mus_musculus", "Mus_spretus"], name="Mus")
 verdict.is_monophyletic
-groups     = ort.detect_groups_from_labels(tree.tip_labels())   # {属名: [末端...]}
+groups  = ort.detect_groups_from_labels(tree.tip_labels())   # {属名: [末端...]}
 # 群名外群 / 群名校正：outgroup=、taxon_set= 中写类群名即可
-tree2 = ort.read_tree(path, outgroup=["Monotremata"], taxon_table=table_map)
+tree2 = ort.read_tree(path, outgroup=["Monotremata"], taxon_table=ort.parse_taxon_table("taxa.tsv"))
 cal2  = ort.calibrate(times, cals, taxon_table=table_map)
 ```
 
@@ -393,7 +395,7 @@ openreltime-studio
 ```
 
 Apple Silicon 上还可以直接取 Studio 的 Release 附件
-`OpenRelTimeStudio-v0.1.1-macOS-arm64.zip`，解压即用，完全不需要 Python。
+`OpenRelTimeStudio-v0.1.1-macOS-arm64.zip`，完全不需要 Python。
 
 * 主页：<https://github.com/ZengZichao/OpenRelTime-Studio>
 * 界面能力：完整的中英双语界面（「视图 ▸ 语言」即时切换）、浅色/深色两套主题
@@ -414,15 +416,14 @@ LRT 速率约束精修。二者应高度相关（相关系数报告为 0.98～0.
 位一致。详见 `docs/methods-zh.md` §2。
 
 **Q2 与 R3F 一致到什么程度？**
-同一算法、同一 epsilon 位置。G2a 与 G2b 门在 274-tip 哺乳动物树上断言回归斜率
-≥ 0.999、中位相对偏差 ≤ 1e-6。实测中位约为 6.8e-16（速率）与 8.7e-16（时间），
-最大偏差约为 4.8e-15 与 3.6e-14，这些最大值属于观测值，不是该门断言的内容（见
-`docs/validation-zh.md`）。
+同一算法、同一 epsilon 位置。自动验收门槛 G2a 与 G2b 的判据是：在 274 分类群哺乳
+动物基准树上断言回归斜率 ≥ 0.999、中位相对偏差 ≤ 1e-6。实测中位约为 6.8e-16（速率）
+与 8.7e-16（时间），最大偏差约为 4.8e-15 与 3.6e-14，这些最大值属于观测值，不在该
+门槛的判定之内（见 `docs/validation-zh.md`）。
 
 **Q3 树有 10% 以上零枝长怎么办？**
-软件会发出警告。零枝长使相连节点的速率与时间不可靠，建议改进树推断或删除质量差
-的序列；OpenRelTime 的 epsilon 处理与 R3F 一致，可做敏感性对比（`--no-guard` 或
-不同阈值）。
+软件会发出警告（阈值为 10%，与 R3F 一致）。受影响的估计不可靠，建议重新推断树；
+OpenRelTime 的 epsilon 处理与 R3F 完全一致，因此可做敏感性对比。
 
 **Q4 多分叉树报错？**
 这是有意设计（解析解只对二叉树成立）。确认拓扑后再用
@@ -430,7 +431,7 @@ LRT 速率约束精修。二者应高度相关（相关系数报告为 0.98～0.
 
 **Q5 BLB 管线很慢？**
 BLB 需要跑 `n_subsample × n_replicate` 次 IQ-TREE。先估计单次建树耗时，
-按预算选择网格；OpenRelTime 定时部分单树亚秒级（1,000 tips < 1 s）。
+按预算选择网格；OpenRelTime 定时部分单树亚秒级（1,000 末端 < 1 s）。
 
 **Q6 如何引用？**
 见 `CITATION.cff`，并请同时引用 msy044（RRF）、msz236（CI 与 effective
@@ -444,7 +445,7 @@ bounds）、msz014（CorrTest）与 btab307（ddBD）。
 | `negative branch length at node ...` | 检查树文件；负枝长非法 |
 | `duplicate tip names` | 去重后再运行 |
 | `ingroup has N tips after outgroup removal` | 内群不足 3 个分类群，调整外群 |
-| `outgroup [...] is not a complete clade` | 多末端外群的 MRCA 下混有未指定末端（非完整簇）；补全外群成员，或改用 `--outgroup-check warn` 降级为警告 |
+| `outgroup [...] is not a complete clade` | 多末端外群的 MRCA 下混有未指定末端（非完整单系群）；补全外群成员，或改用 `--outgroup-check warn` 降级为警告 |
 | `outgroup taxon [...] not found in tree (as tip or group)` | 外群名称既不是末端名也不是类群名；检查拼写或提供 `--taxon-table` |
 | `conflicting calibration constraints` | 校正节点互相冲突（如子节点边界早于父节点），放宽边界 |
 | `the repair loop converged on node ages that are not nested in the tree` | 这棵树无论怎样缩放速率都无法容纳所给边界：收敛解出现负年龄，或后代比祖先更老，报错信息会点名这些节点 id。随包的 `data/examples/example_calibrations.tsv` 在 `--method effective` 下就是一个实例；请改用 `example_calibrations_feasible.tsv`，或放宽边界 |
@@ -457,12 +458,12 @@ bounds）、msz014（CorrTest）与 btab307（ddBD）。
 | `sampling_frac must lie in (0, 1]` | `0` 是 R3F 表示“待估计”的哨兵值；请改为省略 `--sampling-frac` |
 | `anchor node id must be a positive internal-node id` | 本项目的节点 id 从 1 开始，`0` 不是“不设锚点”的哨兵值 |
 | `executable not found: iqtree/megacc` | 用完整路径传入可执行文件 |
-| `argument ... contains characters outside the allowed set` | 外部工具参数含 shell 元字符；请改用不含空格与分号的路径 |
+| `refusing to run: argument ... contains shell metacharacters` | 外部工具参数不得含 shell 控制字符（`;`、`&`、`\|`、`<`、`>`、`$`、反引号、引号、制表符与换行）；空格与非 ASCII 路径是允许的，且进程始终不经 shell 启动 |
 | CorrScore = 0 或 NaN | 树太小或极端速率过多；先 `--sister-resample`，仍异常则检查枝长 |
 
 ## 10. 可复现性
 
-- 黄金标准与生成脚本：`data/golden/r3f/`、`reproduce/golden_r3f.R`
+- 金标准与生成脚本：`data/golden/r3f/`、`reproduce/golden_r3f.R`
   （R 4.5.3、ape 5.8.1、phangorn 2.11.1、R.utils 2.13.0、FNN 1.1.4.1、
   RColorBrewer 1.1-3，见 `data/PROVENANCE.md`）；
 - 测试：在仓库根目录运行 `python -m pytest`，收集范围是引擎测试
@@ -473,6 +474,6 @@ bounds）、msz014（CorrTest）与 btab307（ddBD）。
   套件）上以 Python 3.13 运行。Windows 作业自 0.1.1 加入，首次运行在下一次 push；
   外部工具链（`blb` 的 IQ-TREE、`megacc` 的 MEGA-CC）在**任何**平台上都不由工作流
   安装——已测与仅声明的对照见 `docs/validation-zh.md`；
-- 随机性（多分叉二叉化、有效边界、BLB、sister 重抽样）一律经 `--seed` 注入并写入
+- 随机性（多分叉二叉化、有效边界、BLB、姊妹对重抽样）一律经 `--seed` 注入并写入
   `_report.json`。只有多分叉二叉化用的是标准库 `random.Random` 而非 numpy，且
   `monophyly` 根本没有报告块可记——详见 `docs/parameters-zh.md`。

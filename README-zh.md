@@ -7,9 +7,9 @@
 [![Python](https://img.shields.io/badge/python-3.10--3.13-blue)](https://pypi.org/project/openreltime/)
 [![CI](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml)
 
-**OpenRelTime** 是相对速率框架（Relative Rate Framework, RRF；Tamura et al.
-2018, *MBE* 35:1770-1782）的开源 Python 实现，也是 MEGA 中 RelTime 分子定年
-方法的核心算法。
+**OpenRelTime** 是用于**非贝叶斯**分子定年的**相对速率框架**（Relative Rate
+Framework, RRF；Tamura et al. 2018, *MBE* 35:1770-1782）的开源 Python 实现；
+该框架即 MEGA 中 RelTime 所依据的方法。
 
 软件从带枝长的系统树出发，估计谱系相对速率与节点分化时间。用户给出的校正点
 （硬边界或概率密度）会转换为绝对分化时间，并给出解析置信区间。软件还内置三项
@@ -20,8 +20,9 @@ little bootstraps，轻量自助重采样）管线。所有功能都提供 Pytho
 - 中文文档（完整手册均有中文版）：[文档目录](docs/README.md) ·
   [使用说明](docs/usage-zh.md) · [参数手册](docs/parameters-zh.md)
 - English documentation: [README.md](README.md) ·
-  [docs/README.md](docs/README.md) · [Usage guide](docs/usage-en.md)
-- Python API 与命令行完全等价；黄金标准回归数据随仓库发布；采用 GPL-3.0 许可
+  [docs/README.md](docs/README.md)（使用说明、参数手册、方法、验证、教程）·
+  [Usage guide](docs/usage-en.md)
+- Python API 与命令行完全等价；金标准（golden）参照数据可复现；采用 GPL-3.0 许可
 
 ```
 @software{openreltime,
@@ -37,16 +38,16 @@ little bootstraps，轻量自助重采样）管线。所有功能都提供 Pytho
 
 ## 为什么需要 OpenRelTime
 
-| 工具 | 语言 | 开源 | 校正转换 | 解析置信区间 | CorrTest | ddBD | API 与 CLI |
+| 工具 | 语言 | 开源 | 校正 | 解析置信区间 | CorrTest | ddBD | API 与 CLI |
 |---|---|---|---|---|---|---|---|
-| MEGA 11 与 12（RelTime 官方） | Pascal | GPL-3 | ✓ | ✓ | ✓ | ✗ | 弱 |
-| R3F | R | GPL-3 | ✗ | ✗ | ✓ | ✓ | ✗ |
+| MEGA 11 与 12（RelTime） | Pascal | GPL-3 | ✓ | ✓ | ✓ | – | 弱 |
+| R3F | R | GPL-3 | – | – | ✓ | ✓ | – |
 | **OpenRelTime** | **Python** | **GPL-3** | **✓（边界+密度）** | **✓** | **✓** | **✓** | **✓** |
 
-OpenRelTime 在 274-tip 哺乳动物树上与 R3F 数值一致：回归斜率 1.0000，速率与
-时间的实测中位相对偏差分别为 6.8e-16 和 8.7e-16。自动验证门 G2a 与 G2b 断言
-斜率 ≥ 0.999、中位相对偏差 ≤ 1e-6。实测最大相对偏差属于观测值，不是该门断言
-的内容，其中速率约 4.8e-15、时间 3.6e-14，详见 `docs/validation-zh.md`。在共享
+OpenRelTime 在 274 分类群哺乳动物基准树上与 R3F 数值一致：回归斜率 1.0000，速率与
+时间的实测中位相对偏差分别为 6.8e-16 和 8.7e-16。自动验收门槛 G2a 与 G2b 的判据为
+斜率 ≥ 0.999、中位相对偏差 ≤ 1e-6。实测最大相对偏差属于观测值，不在该门槛的判定
+范围内，其中速率约 4.8e-15、时间 3.6e-14，详见 `docs/validation-zh.md`。在共享
 核心之上，OpenRelTime 补齐了 R3F 缺失的校正转换与解析置信区间（msz236），并
 提供端到端的 BLB 管线。
 
@@ -79,22 +80,22 @@ pip install --editable ".[dev,plot]"   # 核心（numpy、scipy、pandas、click
 供溯源使用。
 
 环境要求：Python ≥ 3.10，支持 Linux、macOS 和 Windows。项目不含编译扩展，
-安装通常只需数秒。CI 在 Linux（`ubuntu-latest`）上跨 Python 3.10、3.11、3.12
+安装只需数秒。CI 在 Linux（`ubuntu-latest`）上跨 Python 3.10、3.11、3.12
 与 3.13 运行测试套件，在 macOS（`macos-latest`）上**只在 Python 3.13** 上运行
-——`.github/workflows/ci.yml` 的矩阵显式排除了 macOS 上较旧的三个解释器，以缩
-短排队时间，所以 macOS 是单解释器的抽查，而不是 3.10～3.13 的覆盖声明。
+——`.github/workflows/ci.yml` 的矩阵排除了 macOS 上较旧的三个解释器，以缩
+短排队时间，所以 macOS 只是单解释器检查，而不是 3.10～3.13 的覆盖声明。
 Windows（`windows-latest`）以一个独立作业在 Python 3.13 上同时运行引擎套件与端到端
 套件；该作业自 0.1.1 加入，因此其首个证据要等下一次 Actions 运行（已测与仅声明的对照、
 以及套件覆盖不到的一条 Windows 局限，见 `docs/validation-zh.md`）。
 
 ## OpenRelTime Studio（桌面图形界面）——独立产品
 
-**OpenRelTime Studio** 是一款原生桌面程序，面向不愿编写代码的研究者：加载
+**OpenRelTime Studio** 是一款原生桌面程序，面向偏好图形化点选操作的研究者：加载
 Newick 或 NEXUS 树，运行 RRF，在画布上点选内部节点设置校正点，然后依次完成校
 正、解析置信区间、CorrTest 与 ddBD。全部计算都经由本引擎的公开 Python API 执
 行，结果可导出为 CSV、NEXUS、JSON 和 PNG 四种格式，并生成可复现的等效命令行。
 界面完整支持中英双语并即时切换，内置浅色/深色两套主题、手绘矢量 SVG 图标，
-以及一棵自带演示校正点的内置示例树。
+以及一棵自带演示校正点的内置示例树，初次使用无需自备数据。
 
 它**不属于**本仓库，也**不是**从本仓库安装的：Studio 是一款独立项目，把本引擎当作
 普通第三方依赖来使用。引擎从 PyPI 安装；Studio 本身暂未上包索引，其 wheel 从它的
@@ -107,7 +108,7 @@ openreltime-studio
 ```
 
 Apple Silicon 上还可以直接取 Studio 的 Release 附件
-`OpenRelTimeStudio-v0.1.1-macOS-arm64.zip`，解压即用，完全不需要 Python。
+`OpenRelTimeStudio-v0.1.1-macOS-arm64.zip`，完全不需要 Python。
 
 主页：<https://github.com/ZengZichao/OpenRelTime-Studio> · 图形界面手册见该项目
 自己的文档。只安装本引擎时，上文的 Python API 与全部命令行子命令都不受影响
@@ -137,22 +138,23 @@ openreltime blb -a alignment.fasta --iqtree iqtree --seed 42 -o blb_out
 
 ## 功能总览
 
-- **RRF 核心**：提供几何平均与算术平均两套解析解。前者与 R3F（msy044）的
-  式 28～42 一致，后者对应 2012 年的原始语义（式 1～27）。同时支持速率比阈值
-  保护、多分叉处理，以及 Newick 与 NEXUS（含 `[&rate=...]` 注释）读写。
+- **RRF 核心**：提供两套平均约定——几何平均（msy044 式 28～42，R3F 与本项目
+  默认）与算术平均（msy044 式 1～27，PNAS 2012 的原始语义）。同时支持
+  极端速率保护、多分叉处理，以及 Newick 与 NEXUS（含 `[&rate=...]` 注释）读写。
 - **校正转换**：支持硬边界的下限与上限，以及 `uniform`、`exponential`、
   `normal`、`lognormal` 四类概率密度，经全局时间因子 *f* 转换为绝对时间。
   同时支持 msz236 的有效边界（effective bounds）重采样法。
-- **解析置信区间**：实现 msz236 的 delta method（式 7～14）。抽样方差的来源
-  由用户指定，可取给定值、Poisson 近似或零，结果按硬边界截断。有效边界法还会
-  输出经验分位 CI。
-- **CorrTest**：基于固定系数逻辑回归的速率自相关检验（Tao et al. 2019）。
-- **ddBD**：为贝叶斯定年估计 birth–death 物种分化树先验（出生率、死亡率、
+- **解析置信区间**：实现 msz236 的 delta 方法（微分法，式 7～14）。抽样方差
+  按显式提供的枝长方差 → Poisson 近似 → 零 的顺序取第一个已提供的来源，结果按硬
+  边界截断。有效边界法的重抽样复制还给出经验的节点年龄 CI。
+- **CorrTest**：基于已发表的固定系数逻辑回归模型的速率自相关检验（Tao et al. 2019）。
+- **ddBD**：为贝叶斯定年估计出生-死亡物种分化树先验（出生率、死亡率、
   抽样比例）。
-- **BLB 管线**：对位点执行两级重采样（无放回子采样加 bootstrap 上采样），经
-  IQ-TREE 推断树后按节点 clade 聚合。
-- **MEGA-CC 桥接**（可选 extra）：自动生成 `.mao`、调用 `megacc`、解析
-  `megacc` 的 RelTime 输出，便于 MEGA 用户迁移与第三方对照。
+- **BLB 管线**：对位点执行两级重采样（无放回子采样，再用 bootstrap 上采样至原始
+  长度），经 IQ-TREE 推断树后按各节点所代表单系群（clade）聚合时间。
+- **MEGA-CC 桥接**（可选）：自动生成 `.mao`、调用 `megacc`、解析
+  `megacc` 的 RelTime 输出并回写为 OpenRelTime 表格，便于 MEGA 用户迁移与第三
+  方对照。
 
 ## 命令行一览
 
@@ -205,13 +207,13 @@ node_id	taxon_set	min_bound	max_bound	density	density_params
 python -m pytest tests/
 ```
 
-- **G1**：3 与 4 分类群手算黄金值（两套均值约定，误差 < 1e-12）；
-- **G2a 与 G2b**：274-tip 哺乳动物树与 R3F 回归（门断言斜率 ≥ 0.999、中位相对
-  偏差 ≤ 1e-6；实测中位为速率 6.8e-16、时间 8.7e-16）；
+- **G1**：3 与 4 分类群手算金标准值（两套均值约定，误差 < 1e-12）；
+- **G2a 与 G2b**：274 分类群哺乳动物基准树与 R3F 回归（自动验收门槛的判据为
+  斜率 ≥ 0.999、中位相对偏差 ≤ 1e-6；实测中位为速率 6.8e-16、时间 8.7e-16）；
 - **G2c**：NEXUS `[&rate=...]` 往返互操作；
 - **G6 与 G7**：断言 CorrTest 与 R3F 已存储的 CorrScore（0.9996）一致；覆盖
   校正边界与冲突检测；
-- 黄金标准文件、示例输入与生成金标准的 R 脚本随包发布（`data/golden/r3f/`、
+- 金标准（golden）文件、示例输入与生成金标准的 R 脚本随包发布（`data/golden/r3f/`、
   `data/examples/`（见该目录的 `README-zh.md`）、`data/PROVENANCE-zh.md`、
   `reproduce/golden_r3f.R`）。
 
@@ -232,18 +234,20 @@ python -m pytest tests/
 | [THIRD-PARTY-NOTICES-zh.md](THIRD-PARTY-NOTICES-zh.md) | 参考材料与被改造的常数，逐来源说明 | [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) |
 | [data/PROVENANCE-zh.md](data/PROVENANCE-zh.md) | 随包第三方文件的来源、许可与引用 | [data/PROVENANCE.md](data/PROVENANCE.md) |
 
-## 许可与引用
+## 许可与复用
 
 本项目采用 GPL-3.0-or-later（见 `LICENSE`）。对 R3F、MEGA 源码与 ape 的行为
 参考与常数引用，逐项记录在 `THIRD-PARTY-NOTICES-zh.md`。数据许可见
 `data/PROVENANCE-zh.md`。CorrTest 仓库没有提供许可证，本项目未复制它的任何代码，
-只引用 Tao et al. (2019) 已发表的常数。引用方式见 `CITATION.cff`。跨版本引用本软件
-整体请使用引擎的 Zenodo concept DOI
-[10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145)；
-[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146) 是已存档的
-**v0.1.0** 版本记录，0.1.1 对应的版本记录在切出 0.1.1 发布时生成。
+只引用 Tao et al. (2019) 已发表的常数。
 
 ## 作者
 
-曾子超 · [zengzichao@sjtu.edu.cn](mailto:zengzichao@sjtu.edu.cn) ·
+曾子超（Zichao Zeng）· [zengzichao@sjtu.edu.cn](mailto:zengzichao@sjtu.edu.cn) ·
 [ORCID 0000-0001-6553-970X](https://orcid.org/0000-0001-6553-970X)
+
+首选引用方式记录在 [`CITATION.cff`](CITATION.cff) 中。跨版本引用本软件整体请引用
+引擎的 Zenodo *concept* DOI
+[10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145)；
+[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146) 是已存档的
+**v0.1.0** 版本记录，0.1.1 对应的版本记录在切出 0.1.1 发布时生成。

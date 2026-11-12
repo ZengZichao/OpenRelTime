@@ -20,11 +20,11 @@ repeated.
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `--outgroup` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | – | ✓ | ✓ |
 | `--fmt` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | ✓ | ✓ | – | – |
-| `--resolve` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | ✓ | – | – |
+| `--resolve` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | ✓ | ✓ | – |
 | `--taxon-table` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | ✓ | – | – |
 | `--outgroup-check` | ✓ | ✓ | ✓ | ✓ | –¹ | ✓ | ✓ | – | – | – | – |
 | `--mean` | ✓ | ✓ | ✓ | ✓ | ✓² | – | – | – | – | – | – |
-| `--rate-ratio-threshold` | ✓³ | ✓ | ✓ | ✓ | ✓² | – | – | – | – | – | – |
+| `--rate-ratio-threshold` | ✓³ | ✓ | – | ✓ | ✓² | – | – | – | – | – | – |
 | `--no-guard` | – | ✓ | – | ✓ | ✓² | – | – | – | – | – | – |
 | `--normalize` | – | ✓ | ✓ | – | – | – | – | – | – | – | – |
 | `--r3f-compat` | – | ✓ | ✓ | – | – | – | – | – | – | – | – |
@@ -99,6 +99,9 @@ alone.
   complete clade (see `outgroup_check`).  A token that is not a tip name is
   resolved as a **group name** via `taxon_table` or auto-detected tip-label
   prefixes and expanded to its members.
+* Omitting the flag triggers no warning, yet every RelTime quantity is anchored
+  on the root: the root position in the input file directly determines all node
+  ages.  Confirm the topology yourself (`docs/validation.md` §5).
 
 ### `taxon_table` — tip classification
 * Type: `None` | `{group: [tip, ...]}` mapping (API:
@@ -483,4 +486,4 @@ reproducible behaviour and mirror R3F.  All live in
 | `RATE_RATIO_THRESHOLD` | 20.0 | rate-ratio guard threshold used by `rrf_times` and `rates-times`; the single default registered for `rate_ratio_threshold` | `rrf_times.R:354-356` |
 | `RATE_RATIO_GUARD_DISABLED` | `None` | the sentinel that switches the guard off; the guard does not run in a rates-only pass | `rrf_rates.R:250-336` vs `rrf_times.R:353-373` |
 | `CALIBRATION_MAX_ITER` | 100 | rounds of violation propagation before a conflicting calibration set is reported | msz236 / R3F |
-| `EFFECTIVE_BOUNDS_REPLICATES` | 10 000 | replicates of the effective-bounds procedure | msz236 |
+| `EFFECTIVE_BOUNDS_REPLICATES` | 10_000 | replicates of the effective-bounds procedure | msz236 |

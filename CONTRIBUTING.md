@@ -1,8 +1,9 @@
 # Contributing to OpenRelTime
 
+**Language: English** · [中文](CONTRIBUTING-zh.md)
+
 Thanks for your interest!  This document covers what a patch needs to get
-accepted.  中文版见 [CONTRIBUTING-zh.md](CONTRIBUTING-zh.md)。Issues 与 PR
-使用英文或中文均可。
+accepted.  Issues and PRs may be written in English or Chinese.
 
 ## Development setup
 
@@ -29,8 +30,8 @@ python -m build                          # only when packaging files change
 
 CI runs the same checks on Ubuntu (Python 3.10–3.13) and macOS (3.13), plus
 a `minimum-versions` job that pins the oldest declared dependency floors
-(`.github/constraints-minimum.txt`).  `mypy` currently runs **advisory** in
-CI — run it locally with
+(`.github/constraints-minimum.txt`).  `mypy` currently runs **advisory**
+(non-blocking) in CI — run it locally with
 `python -m mypy openreltime --python-version 3.12` and avoid introducing new
 findings.
 

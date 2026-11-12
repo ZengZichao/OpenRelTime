@@ -9,7 +9,7 @@ import openreltime as ort
 
 tree = ort.read_tree("mam.treefile", outgroup=["Out1", "Out2"])
 
-# 指定要报告的抽样比例（出生率/死亡率仍来自自由 rho 的拟合）
+# 指定要报告的抽样比例（拟合中 rho 保持自由）
 bd = ort.ddbd(tree, sampling_frac=0.5, anchor_time=1.85)
 
 # 全部待估（默认）
@@ -27,7 +27,7 @@ bd.write("mam_ddbd")
 rho 留作自由参数，因此 `sampling_frac` 并不约束拟合。自由拟合得到的 rho 仍可在
 报告的 `sampling_frac_fitted` 中查看。
 
-## MEGA-CC 桥接（可选 extra）
+## MEGA-CC 桥接（可选）
 
 供从 MEGA 流程迁移或做第三方对照使用：
 
@@ -60,7 +60,7 @@ openreltime megacc -i mam.treefile -c calibrations.tsv --megacc /opt/megacc \
 
 桥接有两个限制，详见 `docs/validation-zh.md`。第一，它需要真实的 `megacc` 可执行
 文件，CI 既不安装也不运行该程序，因此 MEGA-CC 的一致性依据已发表的 R3F/MEGA 结果与
-随包黄金文件确立，而不是依据此处新做的头对头运行。第二，OpenRelTime
+随包金标准文件确立，而不是依据此处新做的头对头运行。第二，OpenRelTime
 的解析 RRF 层缺少 MEGA 的似然比精修，逐节点差异属预期之内。把它当作对照工具，
 不要当作等价性声明。
 

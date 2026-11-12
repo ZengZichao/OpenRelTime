@@ -1,5 +1,7 @@
 # Figure sources
 
+**Language: English** · [中文](README-zh.md)
+
 Source code and data for the four figures of the OpenRelTime manuscript:
 **Figure 1** (analysis workflow), **Figure S1** (software architecture),
 **Figure S2** (agreement with R3F and wall-clock time) and **Figure S3**
