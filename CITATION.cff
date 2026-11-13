@@ -18,7 +18,7 @@ version: 0.1.1
 # instead when a specific archived release must be pinned.  Never pair the v0.1.0
 # record with this version.  See README.md's citation block.
 doi: "10.5281/zenodo.23053145"
-date-released: "2026-10-08"
+date-released: "2026-10-14"
 repository-code: "https://github.com/ZengZichao/OpenRelTime"
 license: GPL-3.0-or-later
 funding: >-

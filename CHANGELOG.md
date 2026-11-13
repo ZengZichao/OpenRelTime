@@ -5,7 +5,7 @@
 OpenRelTime follows Semantic Versioning.  This file records the contents of
 each release, newest first.
 
-## 0.1.1 — 2026-10-08
+## 0.1.1 — 2026-10-14
 
 Bug-fix and hardening release prepared during pre-submission review of the
 accompanying *Bioinformatics* Application Note.  Every item below was found by
