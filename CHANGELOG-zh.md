@@ -87,8 +87,8 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
 
 ### 变更
 
-- `docs/validation.md`、`docs/validation-zh.md` 与 `README.md` 原称 CI 在 Ubuntu
-  与 macOS 上都跑 Python 3.10–3.13。`ci.yml` 实际排除了 macOS 的
+- `README.md`、`README-zh.md`、`docs/validation.md` 与 `docs/validation-zh.md`
+  原称 CI 在 Ubuntu 与 macOS 上都跑 Python 3.10–3.13。`ci.yml` 实际排除了 macOS 的
   3.10/3.11/3.12，文档已改为真实矩阵：Linux 3.10–3.13，macOS 仅 3.13。
 - `ZERO_BRLEN_WARN_FRACTION` 与 `MIN_INGROUP_TIPS` 现在真正被使用它们的代码引用，
   不再是与字面量并存的第二份真相。
@@ -98,10 +98,10 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
   分配给它的门槛一致。
 - 文档已与代码和测试对齐：G5 一行不再声称与 `ape` 置根「字节一致」（断言比的是
   规范化后的 `(末端名, 深度)` 二元组）；G2a/G2b 的说明拆成两条，因为 G2b 确实约束了
-  逐节点最大值；FigTree 可读性契约改引用真实存在的测试 id；`seed` 一节点名多分叉
-  解析用的是标准库 `random.Random`，不再承诺「一律经 `numpy.random.Generator`」；
-  `data/golden/r3f/example_RRF_rates.nwk` 也补上了 `PROVENANCE.md` 开头对每个文件
-  都作出承诺的那一行。
+  逐节点最大值；FigTree 可读性契约改引用真实存在的测试 id；`seed` 一节改为点名
+  多分叉二叉化所用的标准库 `random.Random`，不再承诺「一律经
+  `numpy.random.Generator`」；`data/golden/r3f/example_RRF_rates.nwk` 如今也列在
+  `data/PROVENANCE.md` 中——该文开头承诺为 `data/` 下每个第三方文件都记一行来源。
 
 ## 0.1.0 — 2026-09-29
 
@@ -205,7 +205,7 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
   源。
 - **可选绘图**（`openreltime.viz`，`[plot]` extra）：对数色阶的速率着色时间树、节
   点年龄区间图，以及按所绘坐标轴归一化的 ddBD 密度。
-- **外部进程不经 shell 启动**，转传的每个参数都先经严格白名单校验
+- **外部进程不经 shell 启动**，转传的参数只要含有 shell 元字符就会被拒绝
   （`openreltime._external`）。
 
 ### 验证与数据
@@ -237,14 +237,16 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
   修，本引擎不实现该步骤，因此 OpenRelTime 与 MEGA 是高度相关（在已发表基准上约
   0.98～0.99）而非逐节点相同。与 MEGA 比较时请报告相关性。
 - **与参考工具的比对范围限于随包基准树。** CorrTest 与 ddBD 的门槛是相对 R3F 在
-  274 分类群树上已存储输出的回归检查，不能证明在其他拓扑上也一致；速率与时间回归的
-  门槛断言的是斜率与*中位*相对偏差，最大值属于测量并报告的观测值，不作断言。
+  274 分类群树上已存储输出的回归检查，不能证明在其他拓扑上也一致；速率门槛（G2a）
+  断言的是斜率与*中位*相对偏差，其最大值只是测量并报告的观测值、不作断言，而时间
+  门槛（G2b）确实约束了逐节点的*最大*偏差。
 - **`bootstrap`、`megacc` 与 `viz` 随包交付但没有数值参考门槛。** BLB 与 MEGA-CC
   路径需要外部可执行文件，测试套件并不安装它们；这三个模块的测试覆盖参数传递、输出
   解析与结构性质。MEGA-CC 的一致性依据已发表的 R3F/MEGA 结果与随包金标准文件确立，而
   不是依据新做的头对头运行。
-- **平台。** CI 在 Linux 与 macOS 上跨 Python 3.10～3.13 运行测试套件；Windows 是
-  声明的支持目标，CI 不在该平台运行。所报告的计时来自单台机器，测试套件止于
-  274 分类群金标准树。
+- **平台。** CI 在 Linux（`ubuntu-latest`）上跨 Python 3.10～3.13 运行测试套件，
+  在 macOS（`macos-latest`）上只在 Python 3.13 上运行；Windows 当时只是声明的支持
+  目标，直到 0.1.1 加入 `test-windows` 作业才真正进入 CI。所报告的计时来自单台
+  机器，测试套件止于 274 分类群金标准树。
 - **外群可选。** `--outgroup` 可以省略；此时树按读入原样使用，其根位置决定所有年龄
   且不发出警告，因此调用方须确认输入树已在预期的单系群上置根（R3F 强制要求外群）。

@@ -311,13 +311,14 @@ Two-level resampling: (i) `ceil(L**gamma)` sites without replacement;
 (ii) with-replacement resampling back to length L; IQ-TREE infers each
 replicate tree and OpenRelTime times it.  `blb_out/blb_summary.csv` reports
 per-clade medians, 2.5/97.5 percentiles and the `topology_ok` fraction, and
-`blb_replicates.csv` keeps every replicate table.  `--workdir` retains the
-intermediate replicate alignments and trees (by default they go to a temporary
-directory that is removed); `--seed` also reaches each IQ-TREE run as `-seed`.
-The
-`--gamma 0.7` / `10 x 10` defaults sit inside the admissible BLB range but do
-**not** reproduce the published RelTime-JA run (`g = 0.78`, `20 x 20`); see
-`docs/parameters.md` and `docs/validation.md`.
+`blb_replicates.csv` keeps every replicate table.  `--workdir` writes the
+intermediate replicate alignments and trees to that directory instead of to the
+output directory (the CLI default is the output directory itself; the API's
+`workdir=None` instead makes a temporary directory and leaves it behind);
+`--seed` also reaches each IQ-TREE run as `-seed`.  The `--gamma 0.7` /
+`10 x 10` defaults sit inside the admissible BLB range but do **not** reproduce
+the published RelTime-JA run (`g = 0.78`, `20 x 20`); see `docs/parameters.md`
+and `docs/validation.md`.
 
 ### 3.9 MEGA-CC bridge (optional)
 
@@ -381,16 +382,18 @@ no expression evaluation.
 | `_effective_bounds.csv` | `calibrate --method effective` | effective bounds (msz236) + empirical quantiles |
 | `_ci.csv` | `ci` | node_id, label, time, se, lower, upper, width, se_reliable, notes |
 | `_corrtest.txt` / `_ddbd.txt` | `corrtest` / `ddbd` | CorrScore / BD parameters |
-| `blb_summary.csv`, `blb_replicates.csv` | `blb` | per-clade summary; every replicate table |
-| `_megacc_times.csv` | `megacc` | MEGA-CC node times with a `source` column |
+| `blb_summary.csv`, `blb_replicates.csv`, `blb_report.json` | `blb` | per-clade summary; every replicate table; the run report with the IQ-TREE banner |
+| `_megacc_times.csv`, `_report.json` | `megacc` | MEGA-CC node times with a `source` column; the run report with the megacc banner |
 | `_report.json` | see below | all parameters, warnings and the random seed |
 
 `_report.json` is written by the analysis stages whose parameters can change
 the numbers: `rates`, `times`, `rates-times`, `calibrate`, `ci`, `corrtest`
 and `ddbd`.  Runs that share a prefix **merge** into one report file, each
 contributing its own top-level key, so a whole pipeline stays inspectable in a
-single JSON.  `tree2table`, `monophyly`, `blb` and `megacc` write only their
-table.
+single JSON.  `blb` and `megacc` write a report of their own alongside their
+tables — `blb_report.json` and `<prefix>_report.json` — recording the version
+banner of the external program they called; `tree2table` and `monophyly` write
+only their table.
 
 ## 6. Python API at a glance
 
@@ -463,10 +466,11 @@ implements); MEGA adds an LRT-based rate-constraint refinement.  Expect
 correlations of ~0.98–0.99, not bitwise equality — see `docs/methods.md`.
 
 **Q2. How close is it to R3F?**
-The G2a/G2b gate asserts a regression slope >= 0.999 and a median relative
-deviation <= 1e-6 on the 274-tip mammalian benchmark; the observed medians are
-~6.8e-16 (rates) and ~8.7e-16 (times), with maximum deviations ~4.8e-15 and
-3.6e-14 that are measured but not gated (see `docs/validation.md`).
+On the 274-tip mammalian benchmark the rate gate G2a asserts a regression slope
+>= 0.999 and a median relative deviation <= 1e-6, and the time gate G2b a slope
+>= 0.999 plus a per-node maximum <= 1e-6.  The observed medians are ~6.8e-16
+(rates) and ~8.7e-16 (times); the rate maximum, ~4.8e-15, is measured but
+carries no assertion (see `docs/validation.md`).
 
 **Q3. The tree has many zero-length branches.**
 OpenRelTime warns when ≥ 10% of branches are zero (the R3F threshold).

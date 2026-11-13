@@ -12,9 +12,12 @@ Legend — **API**: keyword argument; **CLI**: flag; **where**: module.
 ## Which flags each subcommand accepts
 
 Read this table from `openreltime <subcommand> --help`; it is the quick index
-into the entries below.  `-i/--input`, `-o/--output` and `-h/--help` exist on
-every subcommand except `blb` (which takes `-o/--output-dir`) and are not
-repeated.
+into the entries below.  `-h/--help` exists on every subcommand, as does an
+`-o` output flag — spelled `--output` (a file prefix) everywhere except `blb`,
+where it is `--output-dir` (a directory).  `-i/--input` is on every subcommand
+except `ci`, which reads the prefix of a previous `calibrate` run through
+`-c/--calibrated`, and `blb`, which takes its alignment through
+`-a/--alignment`.  None of these is repeated below.
 
 | Flag | rates | times | rates-times | calibrate | ci | corrtest | ddbd | tree2table | monophyly | blb | megacc |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -352,8 +355,8 @@ duplicate node ids raise too.
 ## CorrTest (`corrtest`)
 
 ### `sister_resample`
-* Default `0`.  For trees with fewer than ~50 tips use >= 50 resamples of
-  the sister-pair assignment; the mean Spearman rho across resamples is
+* Default `0`.  For trees with fewer than ~50 tips use more than 50 resamples
+  of the sister-pair assignment; the mean Spearman rho across resamples is
   used (R3F behaviour).
 
 ### `anchor_node`, `anchor_time`
@@ -437,16 +440,18 @@ duplicate node ids raise too.
   (`iqtree_args or []`); an empty list is equivalent.
 * CLI: `--iqtree-arg` is repeatable (`--iqtree-arg=-m --iqtree-arg=GTR+G`)
   and unset yields an empty list.
-* Forwarded verbatim to IQ-TREE.  Tokens are validated against a strict
-  allow-list and the process is started without a shell.
+* Forwarded verbatim to IQ-TREE.  Each token is rejected if it contains a
+  shell metacharacter (`openreltime._external`), and the process is started
+  without a shell.
 
 ### `workdir` / `output_dir` (BLB)
 * CLI `--workdir PATH` and `-o/--output-dir PATH` (default `ORT_blb`).
-  Intermediate replicate alignments and trees are written under `workdir`
-  (default: a temporary directory that is removed afterwards);
-  `blb_summary.csv` and `blb_replicates.csv` are written into `output_dir`,
-  which is created if missing.  Keep `--workdir` when an analysis must be
-  audited replicate by replicate.
+  Intermediate replicate alignments and trees are written under `workdir`,
+  which the CLI defaults to `output_dir` itself so the replicates stay next to
+  the tables; the API's `workdir=None` instead makes a temporary directory and
+  leaves it in place.  `blb_summary.csv` and `blb_replicates.csv` are written
+  into `output_dir`, which is created if missing.  Pass `--workdir` to put the
+  replicates somewhere else.
 
 ## MEGA-CC bridge (`megacc`)
 
@@ -461,16 +466,20 @@ duplicate node ids raise too.
 
 ### `mao`
 * CLI `--mao PATH`, optional: use a hand-written `.mao` analysis-description
-  file instead of the generated minimal one.  The generated file is written
-  into `workdir` and printed by the run.
+  file instead of the generated minimal one.  Without it the generated file is
+  written into `workdir` as `reltimeFromBranchLengths.mao`.  Either way its path
+  is recorded in the report JSON, which is what the run prints.
 
 ### `workdir` / output
-* CLI `--workdir PATH`: where the `.mao` and megacc's stdout/stderr land.
+* CLI `--workdir PATH`: where the `.mao` and megacc's stdout/stderr land; the
+  API's `workdir=None` instead makes a temporary directory and leaves it in
+  place, and the path actually used is recorded in the report JSON.
 * Results are written to `<prefix>_megacc_times.csv`, an R3F-compatible node
   time table whose `source` column records where every row came from.  Every
-  argument is checked against an allow-list and megacc is started without a
-  shell; if megacc produces nothing parseable the run raises rather than
-  silently substituting OpenRelTime's own estimates.
+  argument is rejected if it contains a shell metacharacter
+  (`openreltime._external`) and megacc is started without a shell; if megacc
+  produces nothing parseable the run raises rather than silently substituting
+  OpenRelTime's own estimates.
 
 ## Numerical constants (advanced)
 

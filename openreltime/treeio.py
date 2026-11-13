@@ -629,7 +629,7 @@ def root_outgroup(
     """Root *tree* on the MRCA of *outgroup* and remove the outgroup tips.
 
     Semantics aligned with ``ape::root(..., resolve.root = TRUE)`` followed by
-    ``ape::drop.tip`` (verified against ape 5.8; see docs/adr/ADR-004):
+    ``ape::drop.tip`` (verified against ape 5.8.1; see docs/adr/ADR-004):
 
     * a new root is inserted with the outgroup MRCA as one child.  The
       outgroup side carries a zero-length stem, except when the MRCA is a

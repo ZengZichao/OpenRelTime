@@ -64,8 +64,8 @@ node_id	taxon_set	min_bound	max_bound	density	density_params
   `Dasypus`/`Choloepus` 边界——正是这样一种不可满足的表；随包的
   `data/examples/example_calibrations.tsv` 也仍然是，所以它被写成一个“预期会失败”
   的格式示意，见 `data/examples/README-zh.md`。想拿到开箱即用的表，请用
-  `data/examples/example_calibrations_feasible.tsv`——同样的四条硬边界，只是没有
-  密度那一行。
+  `data/examples/example_calibrations_feasible.tsv`——Homo、Mus 与 Dasypus
+  三条边界相同，`Elephas`/`Loxodonta` 那一行收窄为 `2.0`/`4.0`，并且没有密度行。
 
 > 第 4 步求置信区间的对象是一次 **bounds** 校正，因为交给它的正是该结果。
 > `confidence_interval` 会复现所接收结果的估计器——平均约定、速率比保护以及

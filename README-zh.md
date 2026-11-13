@@ -47,11 +47,11 @@ little bootstraps，轻量自助重采样）管线。所有功能都提供 Pytho
 | **OpenRelTime** | **Python** | **GPL-3** | **✓（边界+密度）** | **✓** | **✓** | **✓** | **✓** |
 
 OpenRelTime 在 274 分类群哺乳动物基准树上与 R3F 数值一致：回归斜率 1.0000，速率与
-时间的实测中位相对偏差分别为 6.8e-16 和 8.7e-16。自动验收门槛 G2a 与 G2b 的判据为
-斜率 ≥ 0.999、中位相对偏差 ≤ 1e-6。实测最大相对偏差属于观测值，不在该门槛的判定
-范围内，其中速率约 4.8e-15、时间 3.6e-14，详见 `docs/validation-zh.md`。在共享
-核心之上，OpenRelTime 补齐了 R3F 缺失的校正转换与解析置信区间（msz236），并
-提供端到端的 BLB 管线。
+时间的实测中位相对偏差分别为 6.8e-16 和 8.7e-16。自动验收门槛的判据是：速率
+（G2a）斜率 ≥ 0.999 且中位相对偏差 ≤ 1e-6，时间（G2b）斜率 ≥ 0.999 且逐节点最大
+相对偏差 ≤ 1e-6；实测的速率最大偏差（约 4.8e-15）只是观测值，不受任何断言约束，
+详见 `docs/validation-zh.md`。在共享核心之上，OpenRelTime 补齐了 R3F 缺失的校正
+转换与解析置信区间（msz236），并提供端到端的 BLB 管线。
 
 ## 安装
 
@@ -175,10 +175,11 @@ openreltime megacc       -i tree.nwk -c calibrations.tsv --megacc /path/to/megac
 ```
 
 参数会改变数值结果的分析步骤有七个：`rates`、`times`、`rates-times`、
-`calibrate`、`ci`、`corrtest` 和 `ddbd`。它们都把运行参数、警告与随机种子合并
-写入 `<prefix>_report.json`。共用同一前缀的各次运行
-在该文件中各占一个顶层键。其余四个子命令（`tree2table`、`monophyly`、`blb`、
-`megacc`）只输出自己的结果表。
+`calibrate`、`ci`、`corrtest` 和 `ddbd`。它们都把运行参数、警告与随机种子合并写入
+`<prefix>_report.json`，共用同一前缀的各次运行在该文件中各占一个顶层键。
+`tree2table` 与 `monophyly` 只输出自己的结果表；`blb` 与 `megacc` 除结果表外还写出
+一份报告（`blb_report.json`、`<prefix>_report.json`），记录所调用外部程序的版本
+横幅。
 
 ## 校正文件格式（`calibrations.tsv`，制表符分隔）
 
@@ -247,6 +248,9 @@ python -m pytest tests/
 
 曾子超（Zichao Zeng）· [zengzichao@sjtu.edu.cn](mailto:zengzichao@sjtu.edu.cn) ·
 [ORCID 0000-0001-6553-970X](https://orcid.org/0000-0001-6553-970X)
+
+王寅炤（Yinzhao Wang）· [wyz@sjtu.edu.cn](mailto:wyz@sjtu.edu.cn) ·
+[ORCID 0000-0001-8715-1386](https://orcid.org/0000-0001-8715-1386)
 
 首选引用方式记录在 [`CITATION.cff`](CITATION.cff) 中。跨版本引用本软件整体请引用
 引擎的 Zenodo *concept* DOI

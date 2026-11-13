@@ -12,8 +12,10 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 
 本表等价于 `openreltime <subcommand> --help` 的结果（`<subcommand>` 即子命令名），
 同时充当下文各条目的快速索引。
-除 `blb` 使用 `-o/--output-dir` 之外，所有子命令都有 `-i/--input`、
-`-o/--output` 与 `-h/--help`，表中不再重复。
+`-h/--help` 在所有子命令上都有，`-o` 输出选项也都有——除 `blb` 用
+`--output-dir`（目录）之外，都写作 `--output`（文件前缀）。`-i/--input` 除
+`ci`（它用 `-c/--calibrated` 读取上一次 `calibrate` 运行的前缀）和 `blb`（它用
+`-a/--alignment` 读入比对）之外也都有。这些选项在下文不再重复。
 
 | 选项 | rates | times | rates-times | calibrate | ci | corrtest | ddbd | tree2table | monophyly | blb | megacc |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -297,7 +299,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 ## CorrTest（`corrtest`）
 
 ### `sister_resample`
-* 默认 `0`。末端数少于约 50 的树应使用 ≥ 50 次姊妹对（sister pair）分配
+* 默认 `0`。末端数少于约 50 的树应使用超过 50 次姊妹对（sister pair）分配
   重采样；取抽样间 Spearman rho 的均值（R3F 行为）。
 
 ### `anchor_node`、`anchor_time`
@@ -372,13 +374,15 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   （`iqtree_args or []`）；空列表等价。
 * CLI：`--iqtree-arg` 可重复
   （`--iqtree-arg=-m --iqtree-arg=GTR+G`），不传得到空列表。
-* 原样转发给 IQ-TREE。记号经过严格白名单校验，且进程不经 shell 启动。
+* 原样转发给 IQ-TREE。每个记号只要含有 shell 元字符就会被拒绝
+  （`openreltime._external`），且进程不经 shell 启动。
 
 ### `workdir` 与 `output_dir`（BLB）
 * CLI `--workdir PATH` 与 `-o/--output-dir PATH`（默认 `ORT_blb`）。
-  中间产出的重采样比对与树写入 `workdir`（默认是事后删除的临时目录）；
-  `blb_summary.csv` 与 `blb_replicates.csv` 写入 `output_dir`，目录不存在时创建。
-  需要逐复制审计时请指定 `--workdir`。
+  中间产出的重采样比对与树写入 `workdir`，CLI 默认把它取为 `output_dir`
+  本身，使复制文件与结果表放在一起；API 的 `workdir=None` 则另建临时目录，
+  运行结束后不删除。`blb_summary.csv` 与 `blb_replicates.csv` 写入
+  `output_dir`，目录不存在时创建。要把复制文件放到别处时指定 `--workdir`。
 
 ## MEGA-CC 桥接（`megacc`）
 
@@ -393,14 +397,17 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 
 ### `mao`
 * CLI `--mao PATH`，可选：用手写的 `.mao` 分析描述文件替代生成的最小控制文件。
-  软件把生成的文件写在 `workdir` 下，并在运行输出中给出该文件的路径。
+  不给出时，软件把生成的文件以 `reltimeFromBranchLengths.mao` 写在 `workdir`
+  下。无论手写还是生成，该文件路径都记录在报告 JSON 里——运行打印的就是报告。
 
 ### `workdir` 与输出
-* CLI `--workdir PATH`：`.mao` 与 megacc 的 stdout、stderr 落在这里。
+* CLI `--workdir PATH`：`.mao` 与 megacc 的 stdout、stderr 落在这里；API 的
+  `workdir=None` 则另建临时目录并在运行结束后保留，实际使用的路径记录在报告
+  JSON 中。
 * 结果写入 `<prefix>_megacc_times.csv`，是与 R3F 同构的节点时间表，该表的
-  `source` 列记录每一行的来源。所有参数都经白名单校验，且 megacc 不经 shell 启
-  动；若 megacc 没有产生可解析的输出，运行会报错，而不会悄悄改用 OpenRelTime 自
-  己的估计。
+  `source` 列记录每一行的来源。所有参数只要含有 shell 元字符就会被拒绝
+  （`openreltime._external`），且 megacc 不经 shell 启动；若 megacc 没有产生可
+  解析的输出，运行会报错，而不会悄悄改用 OpenRelTime 自己的估计。
 
 ## 数值常数（进阶）
 

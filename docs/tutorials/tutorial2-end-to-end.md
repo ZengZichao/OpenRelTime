@@ -70,8 +70,9 @@ instead of quietly working around the problem:
   shipped `data/examples/example_calibrations.tsv` still is one: it is
   documented as a format illustration that is expected to fail, see
   `data/examples/README.md`.  For a table that runs as it stands use
-  `data/examples/example_calibrations_feasible.tsv` — the same four hard bounds
-  without the density row.
+  `data/examples/example_calibrations_feasible.tsv` — the same Homo, Mus and
+  Dasypus bounds, the `Elephas`/`Loxodonta` row narrowed to `2.0`/`4.0`, and no
+  density row.
 
 > Step 4 qualifies a **bounds** calibration, because that is the result it is
 > handed.  `confidence_interval` reproduces the estimator behind whatever

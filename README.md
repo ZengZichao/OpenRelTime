@@ -48,12 +48,12 @@ or the command line.
 
 OpenRelTime reproduces R3F numerically on the 274-tip mammalian benchmark
 (regression slope 1.0000; observed median relative deviation 6.8e-16 for rates
-and 8.7e-16 for times).  The automated gate G2a/G2b asserts a slope >= 0.999
-and a median relative deviation <= 1e-6; the largest observed deviation
-(~4.8e-15 rates, 3.6e-14 times) is measured but not asserted by the gate — see
-`docs/validation.md`.  On top of the shared core OpenRelTime adds the modules
-R3F lacks — calibration conversion and analytical confidence intervals (msz236)
-— plus an end-to-end BLB pipeline.
+and 8.7e-16 for times).  The automated gates assert a slope >= 0.999 plus a
+median relative deviation <= 1e-6 for rates (G2a) and a per-node maximum
+<= 1e-6 for times (G2b); the observed rate maximum (~4.8e-15) is measured but
+carries no assertion — see `docs/validation.md`.  On top of the shared core
+OpenRelTime adds the modules R3F lacks — calibration conversion and analytical
+confidence intervals (msz236) — plus an end-to-end BLB pipeline.
 
 ## Installation
 
@@ -190,8 +190,9 @@ openreltime megacc       -i tree.nwk -c calibrations.tsv --megacc /path/to/megac
 Every analysis stage whose parameters can move the numbers (`rates`, `times`,
 `rates-times`, `calibrate`, `ci`, `corrtest`, `ddbd`) merges its parameters,
 warnings and random seed into `<prefix>_report.json`; runs that share a prefix
-contribute their own key. `tree2table`, `monophyly`, `blb` and `megacc` write
-only their table.
+contribute their own key. `tree2table` and `monophyly` write only their table;
+`blb` and `megacc` write their tables plus a report (`blb_report.json`,
+`<prefix>_report.json`) that records the external tool's version banner.
 
 ## Calibration file (`calibrations.tsv`, tab-separated)
 
@@ -263,6 +264,9 @@ only published constants of Tao et al. (2019) are used.
 
 曾子超 (Zichao Zeng) · [zengzichao@sjtu.edu.cn](mailto:zengzichao@sjtu.edu.cn) ·
 [ORCID 0000-0001-6553-970X](https://orcid.org/0000-0001-6553-970X)
+
+王寅炤 (Yinzhao Wang) · [wyz@sjtu.edu.cn](mailto:wyz@sjtu.edu.cn) ·
+[ORCID 0000-0001-8715-1386](https://orcid.org/0000-0001-8715-1386)
 
 The preferred citation is recorded in [`CITATION.cff`](CITATION.cff). Cite
 [10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145), the engine's

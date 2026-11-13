@@ -121,9 +121,9 @@ publish there automatically.
 
 ### Changed
 
-- `docs/validation.md`, `docs/validation-zh.md` and `README.md` claimed CI runs
-  Python 3.10–3.13 on both Ubuntu and macOS.  `ci.yml` excludes macOS for
-  3.10/3.11/3.12, so the documents now state the real matrix: Linux
+- `README.md`, `README-zh.md`, `docs/validation.md` and `docs/validation-zh.md`
+  claimed CI runs Python 3.10–3.13 on both Ubuntu and macOS.  `ci.yml` excludes
+  macOS for 3.10/3.11/3.12, so the documents now state the real matrix: Linux
   3.10–3.13, macOS 3.13 only.
 - `ZERO_BRLEN_WARN_FRACTION` and `MIN_INGROUP_TIPS` are now actually referenced
   by the code that uses them, instead of being duplicated as literals.
@@ -138,8 +138,9 @@ publish there automatically.
   because G2b does bound the per-node maximum, the FigTree NEXUS contract cites
   the real test id, the `seed` section names the stdlib `random.Random` used for
   polytomy binarisation instead of promising "always
-  `numpy.random.Generator`", and `data/golden/r3f/example_RRF_rates.nwk` finally
-  has the provenance row that file's own header promises for every data file.
+  `numpy.random.Generator`", and `data/golden/r3f/example_RRF_rates.nwk` is now
+  listed in `data/PROVENANCE.md`, whose opening paragraph promises a provenance
+  row for every third-party file under `data/`.
 
 ## 0.1.0 — 2026-09-29
 
@@ -270,8 +271,8 @@ extensions.
 - **Optional plotting** (`openreltime.viz`, `[plot]` extra): rate-coloured
   timetrees on a logarithmic colour ramp, node-age interval plots, and ddBD
   densities normalised on the plotted axis.
-- **External processes are started without a shell** and every forwarded
-  argument is checked against a strict allow-list (`openreltime._external`).
+- **External processes are started without a shell** and any forwarded argument
+  containing a shell metacharacter is rejected (`openreltime._external`).
 
 ### Validation and data
 
@@ -308,18 +309,21 @@ extensions.
   node-for-node; report correlations when comparing the two.
 - **Reference agreement is scoped to the bundled benchmark.**  The CorrTest and
   ddBD gates are regression checks against R3F's stored output on the 274-tip
-  tree and do not establish agreement on other topologies; the gate on the rate
-  and time regressions asserts the slope and the *median* relative deviation,
-  while maxima are measured and reported but not asserted.
+  tree and do not establish agreement on other topologies; the rate gate (G2a)
+  asserts the slope and the *median* relative deviation, so its maxima are
+  measured but not asserted, while the time gate (G2b) does bound the per-node
+  *maximum*.
 - **`bootstrap`, `megacc` and `viz` ship without a numerical reference gate.**
   The BLB and MEGA-CC paths need external executables that the test suite does
   not install; their tests cover argument plumbing, output parsing and
   structural properties.  MEGA-CC agreement is established against the
   published R3F/MEGA results and the shipped golden files, not by a new
   head-to-head run.
-- **Platforms.**  CI runs the suite on Linux and macOS across Python 3.10-3.13;
-  Windows is a declared target that CI does not exercise.  Reported timings come
-  from a single machine and the suite stops at the 274-tip golden tree.
+- **Platforms.**  CI runs the suite on Linux (`ubuntu-latest`) across Python
+  3.10-3.13 and on macOS (`macos-latest`) on Python 3.13 only; Windows was a
+  declared target that CI did not exercise until the `test-windows` job was
+  added for 0.1.1.  Reported timings come from a single machine and the suite
+  stops at the 274-tip golden tree.
 - **The outgroup is optional.**  `--outgroup` may be omitted; the tree is then
   used exactly as read and its root position determines every age without a
   warning, so confirm the input is rooted on the intended clade (R3F requires an

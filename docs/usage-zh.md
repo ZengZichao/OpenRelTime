@@ -276,8 +276,9 @@ openreltime blb -a alignment.fasta --iqtree /path/to/iqtree \
 聚合，给出中位时间以及 2.5% 与 97.5% 分位区间（`blb_out/blb_summary.csv`）。
 
 `topology_ok` 列给出包含该单系群的复制比例，`blb_replicates.csv` 保留全部复制
-的逐棵树结果。`--workdir` 用于保留中间的重采样比对与树（默认写入临时目录并在结
-束后删除）；`--seed` 同时以 `-seed` 传给每一次 IQ-TREE 运行。默认
+的逐棵树结果。`--workdir` 把中间的重采样比对与树改写到该目录（CLI 默认就与结果
+表一起放在输出目录中；API 的 `workdir=None` 则另建临时目录，运行结束后不删除）；
+`--seed` 同时以 `-seed` 传给每一次 IQ-TREE 运行。默认
 `--gamma 0.7`、`10 x 10` 落在 BLB 许可范围内，但**不**复现已发表的 RelTime-JA
 运行（`g = 0.78`、`20 x 20`），详见 `docs/parameters-zh.md` 与
 `docs/validation-zh.md`。
@@ -340,14 +341,16 @@ RelTime），`--mao custom.mao` 可用手写的控制文件替代生成文件。
 | `_effective_bounds.csv` | `calibrate --method effective` | 有效边界（msz236）与经验分位区间 |
 | `_ci.csv` | `ci` | node_id、label、time、se、lower、upper、width、se_reliable、notes |
 | `_corrtest.txt` / `_ddbd.txt` | `corrtest` / `ddbd` | CorrScore 与 P 值档位 / BD 参数 |
-| `blb_summary.csv`、`blb_replicates.csv` | `blb` | 逐单系群汇总；全部复制表 |
-| `_megacc_times.csv` | `megacc` | MEGA-CC 节点时间，含 `source` 列 |
+| `blb_summary.csv`、`blb_replicates.csv`、`blb_report.json` | `blb` | 逐单系群汇总；全部复制表；含 IQ-TREE 版本横幅的运行报告 |
+| `_megacc_times.csv`、`_report.json` | `megacc` | MEGA-CC 节点时间，含 `source` 列；含 megacc 版本横幅的运行报告 |
 | `_report.json` | 见下 | 全部运行参数、警告与随机种子 |
 
 `_report.json` 只由参数会影响数值的分析步骤写出：`rates`、`times`、
 `rates-times`、`calibrate`、`ci`、`corrtest`、`ddbd`。共用同一前缀的多次运行会
 **合并**进同一个报告文件，各占一个顶层键，因此整条流水线仍可集中检查与复现。
-`tree2table`、`monophyly`、`blb`、`megacc` 只写出自己的结果表。
+`blb` 与 `megacc` 会在结果表之外写出自己的报告——`blb_report.json` 与
+`<prefix>_report.json`——记录所调用外部程序的版本横幅；`tree2table` 与
+`monophyly` 只写出自己的结果表。
 
 ## 6. Python API 速查
 
@@ -413,10 +416,10 @@ LRT 速率约束精修。二者应高度相关（相关系数报告为 0.98～0.
 位一致。详见 `docs/methods-zh.md`。
 
 **Q2 与 R3F 一致到什么程度？**
-自动验收门槛 G2a 与 G2b 的判据是：在 274 分类群哺乳
-动物基准树上断言回归斜率 ≥ 0.999、中位相对偏差 ≤ 1e-6。实测中位约为 6.8e-16（速率）
-与 8.7e-16（时间），最大偏差约为 4.8e-15 与 3.6e-14，这些最大值属于观测值，不在该
-门槛的判定之内（见 `docs/validation-zh.md`）。
+在 274 分类群哺乳动物基准树上，速率门槛 G2a 断言回归斜率 ≥ 0.999 且中位相对
+偏差 ≤ 1e-6，时间门槛 G2b 断言斜率 ≥ 0.999 加逐节点最大相对偏差 ≤ 1e-6。实测中位
+约为 6.8e-16（速率）与 8.7e-16（时间）；速率最大偏差约 4.8e-15，属于观测值、不受
+断言约束（见 `docs/validation-zh.md`）。
 
 **Q3 树有 10% 以上零枝长怎么办？**
 软件会发出警告（阈值为 10%，与 R3F 一致）。受影响的估计不可靠，建议重新推断树；
