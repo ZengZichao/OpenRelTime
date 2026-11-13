@@ -6,6 +6,8 @@
 [![PyPI](https://img.shields.io/pypi/v/openreltime)](https://pypi.org/project/openreltime/)
 [![Python](https://img.shields.io/badge/python-3.10--3.13-blue)](https://pypi.org/project/openreltime/)
 [![CI](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/OpenRelTime/actions/workflows/ci.yml)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![ORCID](https://img.shields.io/badge/ORCID-0000--0001--6553--970X-a6ce39?logo=orcid&logoColor=white)](https://orcid.org/0000-0001-6553-970X)
 
 **OpenRelTime** 是用于**非贝叶斯**分子定年的**相对速率框架**（Relative Rate
 Framework, RRF；Tamura et al. 2018, *MBE* 35:1770-1782）的开源 Python 实现；

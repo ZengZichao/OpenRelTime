@@ -48,7 +48,7 @@ micromamba activate <your-env>      # 或 conda activate <your-env>
 pip install --editable ".[dev,plot]"
 ```
 
-本包无编译扩展，在 Linux、macOS 与 Windows 上安装都只需数秒。
+本包无编译扩展，在 Linux、macOS 与 Windows 上安装都很快。
 
 ### 1.2 基于源码检出（checkout）工作
 
@@ -74,7 +74,7 @@ python -c "import openreltime; print(openreltime.__version__, openreltime.__file
 ### 2.1 系统树（必需）
 
 带枝长的**有根二叉** Newick（或 NEXUS）树，枝长单位为每位点期望置换数（IQ-TREE、
-RAxML 与 FastTree 的输出可直接使用）。要求：
+RAxML 与 FastTree 的 `.treefile` 可直接使用）。要求：
 
 - 至少 3 个内群分类群；
 - 枝长非负且有限；缺失枝长按 0 处理（会给出警告）；
@@ -82,7 +82,7 @@ RAxML 与 FastTree 的输出可直接使用）。要求：
 
 ### 2.2 外群（推荐）
 
-外群用于置根，置根后软件剔除外群，所有输出仅含内群。支持两种形式：
+树以外群的 MRCA 置根，置根后剔除外群末端，所有输出仅含内群。支持两种形式：
 
 - **单末端外群**：只写一个末端名称；
 - **多末端外群**：写多个名称（逗号分隔或每行一个的文本文件）。
@@ -94,7 +94,7 @@ RAxML 与 FastTree 的输出可直接使用）。要求：
 ```
 
 **不提供外群时**：该选项可以省略，此时既不置根也不剔除，树按读入原样使用。
-RelTime 的一切量都锚定在根上，输入文件的根位置因此直接决定所有节点年龄，而
+RelTime 的一切量都锚定在根上，输入文件的根位置因此会静默地决定所有节点年龄，而
 OpenRelTime 对此**不做任何警告**。请务必确认输入树已按预期的单系群（clade）置根（R3F 强制
 要求外群；见 `docs/validation-zh.md` §5）。
 
@@ -166,13 +166,13 @@ openreltime calibrate -i tree.nwk -c calibrations.tsv --outgroup og.txt \
     --method effective --n-effective 10000 --seed 42 -o mam_cal
 ```
 
-- `--method bounds`（默认）：`min` 与 `max` 硬边界；全局因子 f 取可行域中点，而
+- `--method bounds`（默认）：`min` 与 `max` 硬边界；全局因子 `f` 取可行域中点，而
   只给下界或只给上界的校正表直接取那条有限边界（节点恰好落在该边界上，且与你使用的
   时间单位无关）；无法满足时沿该谱系**按比例**缩放速率，并向其**全部后代**传播，
   迭代调整（上限 100 次），仍不可行则报错并列出冲突节点；若收敛解仍然存在负
   年龄、或后代比祖先更老，软件会报错并点名这些节点，
   而不是只留下警告；
-- `--method effective`：密度校正按 msz236 抽样转换，`--n-effective` 控制复制数
+- `--method effective`：按 msz236 对密度做重采样，`--n-effective` 控制复制数
   （默认 10,000），输出有效边界表 `<prefix>_effective_bounds.csv` 与各节点的经验
   年龄分位区间。只给密度而不给硬边界的行在 `bounds` 下不构成任何约束，解析阶段会
   拒绝这类行，因此这类行必须改用 `effective`；
@@ -271,8 +271,8 @@ openreltime blb -a alignment.fasta --iqtree /path/to/iqtree \
     --iqtree-arg=-m --iqtree-arg=GTR+G --seed 42 -o blb_out
 ```
 
-两级重采样：① 无放回抽取 ⌈L^gamma⌉ 个位点（示例中 gamma = 0.7）；② 每个子采样
-内有放回重抽 L 个位点。其后是 IQ-TREE 建树、OpenRelTime 定时，最后按节点单系群
+两级重采样：① 无放回抽取 `ceil(L**gamma)` 个位点；② 每个子采样内有放回地重采样
+回 L 个位点。其后是 IQ-TREE 建树、OpenRelTime 定时，最后按节点单系群
 聚合，给出中位时间以及 2.5% 与 97.5% 分位区间（`blb_out/blb_summary.csv`）。
 
 `topology_ok` 列给出包含该单系群的复制比例，`blb_replicates.csv` 保留全部复制
@@ -369,7 +369,7 @@ table_map = ort.parse_taxon_table("taxa.tsv")                # {类群: [末端.
 verdict = ort.check_monophyly(tree, ["Mus_musculus", "Mus_spretus"], name="Mus")
 verdict.is_monophyletic
 groups  = ort.detect_groups_from_labels(tree.tip_labels())   # {属名: [末端...]}
-# 群名外群 / 群名校正：outgroup=、taxon_set= 中写类群名即可
+# 群名外群 / 群名校正：
 tree2 = ort.read_tree(path, outgroup=["Monotremata"], taxon_table=ort.parse_taxon_table("taxa.tsv"))
 cal2  = ort.calibrate(times, cals, taxon_table=table_map)
 ```
@@ -410,7 +410,7 @@ Apple Silicon 上还可以直接取 Studio 的 Release 附件
 **Q1 与 MEGA 的 RelTime 结果完全一致吗？**
 不完全。OpenRelTime 实现解析 RRF 层（与 R3F 同层）；MEGA 在此之上还有
 LRT 速率约束精修。二者应高度相关（相关系数报告为 0.98～0.99），但不会逐
-位一致。详见 `docs/methods-zh.md` §2。
+位一致。详见 `docs/methods-zh.md`。
 
 **Q2 与 R3F 一致到什么程度？**
 自动验收门槛 G2a 与 G2b 的判据是：在 274 分类群哺乳
@@ -427,8 +427,8 @@ OpenRelTime 的 epsilon 处理与 R3F 完全一致，因此可做敏感性对比
 `--resolve random`，受影响节点会记录在日志中。
 
 **Q5 BLB 管线很慢？**
-BLB 需要跑 `n_subsample × n_replicate` 次 IQ-TREE。先估计单次建树耗时，
-按预算选择网格；OpenRelTime 定时部分单树亚秒级（1,000 末端 < 1 s）。
+BLB 需要跑 `n_subsample × n_replicate` 次 IQ-TREE；OpenRelTime 的定时步骤本身
+是单树亚秒级（1,000 末端 < 1 s）。请据此安排时间预算。
 
 **Q6 如何引用？**
 见 `CITATION.cff`，并请同时引用 msy044（RRF）、msz236（CI 与 effective
@@ -462,13 +462,14 @@ bounds）、msz014（CorrTest）与 btab307（ddBD）。
 
 - 金标准与生成脚本：`data/golden/r3f/`、`reproduce/golden_r3f.R`
   （R 4.5.3、ape 5.8.1、phangorn 2.11.1、R.utils 2.13.0、FNN 1.1.4.1、
-  RColorBrewer 1.1-3，见 `data/PROVENANCE.md`）；
+  RColorBrewer 1.1-3，见 `data/PROVENANCE-zh.md`）；
 - 测试：在仓库根目录运行 `python -m pytest`，收集范围是引擎测试
   （`tests/`）。桌面前端的自带测试随独立产品 `OpenRelTime-Studio` 一起维护（见
   §7）；
 - 持续集成：`.github/workflows/ci.yml` 在 Ubuntu 上以 Python 3.10、3.11、3.12 和
-  3.13 运行上述测试套件，在 macOS 与 Windows（`windows-latest`，引擎套件加端到端
-  套件）上以 Python 3.13 运行。Windows 作业自 0.1.1 加入，首次运行在下一次 push；
+  3.13 运行上述测试套件，在 macOS 上以 Python 3.13 运行，在 Windows
+  （`windows-latest`，引擎套件加端到端套件）上以 Python 3.13 运行。Windows 作业自
+  0.1.1 加入，首次运行在下一次 push；
   外部工具链（`blb` 的 IQ-TREE、`megacc` 的 MEGA-CC）在**任何**平台上都不由工作流
   安装——已测与仅声明的对照见 `docs/validation-zh.md`；
 - 随机性（多分叉二叉化、有效边界、BLB、姊妹对重采样）一律经 `--seed` 注入并写入
