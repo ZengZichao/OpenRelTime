@@ -88,9 +88,7 @@ RAxML 与 FastTree 的输出可直接使用）。要求：
 - **多末端外群**：写多个名称（逗号分隔或每行一个的文本文件）。
 
 ```bash
-# 单末端
 --outgroup Ornithorhynchus_anatinus
-# 多末端
 --outgroup "Ornithorhynchus_anatinus,Zaglossus_bruijni,Tachyglossus_aculeatus"
 --outgroup outgroup.txt      # 每行一个名称
 ```
@@ -157,7 +155,7 @@ openreltime rates-times -i tree.nwk --outgroup og.txt -o mam --plot mam_tree.png
 - `--r3f-compat`：输出的文件名与列名同 R3F 完全一致（`_RRF_times.csv` 等），
   便于流水线替换。
 
-`--fmt`、`--resolve`、`--taxon-table`、`--outgroup-check`（见 §2）在所有基于树
+`--fmt`、`--resolve`、`--taxon-table`、`--outgroup-check`（见 §2）在基于树
 的子命令上可用。`docs/parameters-zh.md` 开头给出了各子命令支持哪些选项的对照
 表。
 
@@ -185,7 +183,6 @@ openreltime calibrate -i tree.nwk -c calibrations.tsv --outgroup og.txt \
 ### 3.3 解析置信区间
 
 ```bash
-# 基于上一步的 calibrate 前缀
 openreltime ci -c mam_cal --n-sites 1000 -o mam_ci
 ```
 
@@ -210,7 +207,7 @@ openreltime ci -c mam_cal --n-sites 1000 -o mam_ci
 
 ```bash
 openreltime corrtest -i tree.nwk --outgroup og.txt -o mam
-# 小树（末端数 < 50）建议重抽样：
+# 小树（末端数 < 50）建议重采样：
 openreltime corrtest -i tree.nwk --outgroup og.txt --sister-resample 100 --seed 1 -o mam
 ```
 
@@ -293,7 +290,7 @@ openreltime megacc -i tree.nwk -c calibrations.tsv --megacc /path/to/megacc \
 ```
 
 软件自动生成 `reltimeFromBranchLengths.mao`，调用 megacc，再把 megacc 的输出解析
-为与 OpenRelTime 和 R3F 同构的节点时间表 `<prefix>_megacc_times.csv`，其中
+为 R3F 兼容的节点时间表 `<prefix>_megacc_times.csv`，其中
 `source` 列逐行标注来源。`-c/--calibrations` 可以省略（此时只按枝长跑
 RelTime），`--mao custom.mao` 可用手写的控制文件替代生成文件。若 megacc 没有给出
 可解析的输出，运行会直接报错——绝不会拿 OpenRelTime 自己的估计冒充 MEGA 结果。
@@ -416,7 +413,7 @@ LRT 速率约束精修。二者应高度相关（相关系数报告为 0.98～0.
 位一致。详见 `docs/methods-zh.md` §2。
 
 **Q2 与 R3F 一致到什么程度？**
-同一算法、同一 epsilon 位置。自动验收门槛 G2a 与 G2b 的判据是：在 274 分类群哺乳
+自动验收门槛 G2a 与 G2b 的判据是：在 274 分类群哺乳
 动物基准树上断言回归斜率 ≥ 0.999、中位相对偏差 ≤ 1e-6。实测中位约为 6.8e-16（速率）
 与 8.7e-16（时间），最大偏差约为 4.8e-15 与 3.6e-14，这些最大值属于观测值，不在该
 门槛的判定之内（见 `docs/validation-zh.md`）。
@@ -427,7 +424,7 @@ OpenRelTime 的 epsilon 处理与 R3F 完全一致，因此可做敏感性对比
 
 **Q4 多分叉树报错？**
 这是有意设计（解析解只对二叉树成立）。确认拓扑后再用
-`--resolve random`，报告中会记录受影响节点。
+`--resolve random`，受影响节点会记录在日志中。
 
 **Q5 BLB 管线很慢？**
 BLB 需要跑 `n_subsample × n_replicate` 次 IQ-TREE。先估计单次建树耗时，
@@ -474,6 +471,6 @@ bounds）、msz014（CorrTest）与 btab307（ddBD）。
   套件）上以 Python 3.13 运行。Windows 作业自 0.1.1 加入，首次运行在下一次 push；
   外部工具链（`blb` 的 IQ-TREE、`megacc` 的 MEGA-CC）在**任何**平台上都不由工作流
   安装——已测与仅声明的对照见 `docs/validation-zh.md`；
-- 随机性（多分叉二叉化、有效边界、BLB、姊妹对重抽样）一律经 `--seed` 注入并写入
+- 随机性（多分叉二叉化、有效边界、BLB、姊妹对重采样）一律经 `--seed` 注入并写入
   `_report.json`。只有多分叉二叉化用的是标准库 `random.Random` 而非 numpy，且
   `monophyly` 根本没有报告块可记——详见 `docs/parameters-zh.md`。

@@ -17,7 +17,7 @@ tag 不会获得安全更新。
    （直达链接：<https://github.com/ZengZichao/OpenRelTime/security/advisories/new>）。
 2. 描述问题、复现方式以及受影响的版本或 commit。
 
-如私有上报渠道不可用，可通过邮箱联系维护者：
+如因任何原因私有上报渠道不可用，可通过邮箱联系维护者：
 **zengzichao@sjtu.edu.cn**（邮件主题请带 "OpenRelTime security"）。
 
 ## 处理预期

@@ -45,7 +45,7 @@ python -m pytest            # 收集范围遵循 [tool.pytest.ini_options]：tes
 * **G1**：算术平均约定只在浅层（2 层）树上检验，此时几何与算术折叠恰好重合。
   更深层的算术行为未在此设手算门槛。
 * **G3**：“字节一致”是同机、同种子的性质（CSV 区域设置、换行符、JSON 键序与
-  zip 元数据都可能跨平台不同）。本文件不把它表述为跨平台保证。CLI/API 的字节测试
+  zip 元数据都可能跨平台不同）。本文件刻意不把它表述为跨平台保证。CLI/API 的字节测试
   按字节比较*数据*产物，而把 JSON 报告按文档比较，因为 CLI 会记录 API 不写的
   读树溯源。
 * **G6 与 G8**：这些是针对随包基准树上 R3F 已存储输出的回归检查，不能证明在
@@ -68,7 +68,7 @@ python -m pytest            # 收集范围遵循 [tool.pytest.ini_options]：tes
 | `taxonomy` | **已验证**（单系性、群名解析、表解析） | G5（`test_taxonomy_monophyly.py`） |
 | `table` | 相对 R3F `tree2table()` 金标准值**已验证** | `test_tree2table_matches_golden` |
 | `_external`、`_constants`、`cli` | 基础设施；行为经 CLI 与 G4 测试冒烟检验，没有独立的参考门槛 | — |
-| **`bootstrap`（BLB）** | **已交付但数值上未验证。** CI 从不安装 IQ-TREE；唯一的一个测试用桩程序替换可执行文件，只检查 argv 与 `-seed` 的传递，以及针对退化复制的保护。重抽样与聚合得到的*分布*没有同任何参考比较过 | 无参考门槛 |
+| **`bootstrap`（BLB）** | **已交付但数值上未验证。** CI 从不安装 IQ-TREE；唯一的一个测试用桩程序替换可执行文件，只检查 argv 与 `-seed` 的传递，以及针对退化复制的保护。重采样与聚合得到的*分布*没有同任何参考比较过 | 无参考门槛 |
 | **`megacc`** | **已交付但未验证。** 桥接需要真实的 `megacc` 二进制，CI 既不安装也不运行；解析测试的输入是*合成*输出。MEGA-CC 的一致性依据已发表的 R3F/MEGA 结果与随包金标准文件确立，而不是依据头对头运行 | 无参考门槛 |
 | **`viz`** | **已交付但未与基线比较。** 测试断言的是结构性质（对数色阶；ddBD 密度在所绘坐标轴上积分为 1）；没有金标准图像比对 | 无参考门槛 |
 
@@ -81,14 +81,14 @@ python -m pytest            # 收集范围遵循 [tool.pytest.ini_options]：tes
 
 | 维度 | CI 实测 | 仅在别处声明 |
 |---|---|---|
-| 操作系统 | `ubuntu-latest`、`macos-latest`（`test` 作业矩阵），另有独立的 `windows-latest` 作业（`test-windows`）同时跑引擎套件与端到端套件 | Windows 支持在 0.1.0 之前**只有声明、没有实证**；该作业自 0.1.1 起进入 CI，其首次真实运行是下一次 push。Windows 上一条不被套件覆盖的代码局限见 §5 |
+| 操作系统 | `ubuntu-latest`、`macos-latest`（`test` 作业矩阵），另有独立的 `windows-latest` 作业（`test-windows`）同时跑引擎套件与端到端套件 | Windows 支持到 0.1.0 为止**只有声明、没有实证**；该作业自 0.1.1 起进入 CI，其首次真实运行是下一次 push。Windows 上一条不被套件覆盖的代码局限见 §5 |
 | Python | **Ubuntu：** 3.10、3.11、3.12、3.13。**macOS：仅 3.13**——`ci.yml` 显式排除了 `macos-latest` × 3.10/3.11/3.12，所以矩阵的 5 个组合是「4 个 Ubuntu + 1 个 macOS」，不是 4 × 2 | 凡「Linux **与** macOS 上覆盖 3.10–3.13」的说法对引擎而言都是错的（独立的 Studio 项目的 CI 才跑满 4 × 2） |
 | 桌面图形界面 | **不在此处检验**——图形界面是独立产品 `OpenRelTime-Studio` | 其无头与交互式覆盖见该项目自己的测试套件与 CI |
 | 外部工具 | **不安装**——`blb`（IQ-TREE）与 `megacc`（MEGA-CC）的路径从不在 CI 中执行 | — |
 | 运行规模 | 金标准/回归基准树是 274 分类群；套件构建的最大树是一棵合成 1,200 末端梳状树，只为解析器/遍历器/序列化器的栈深而运行（`tests/test_regressions_engine.py::test_deep_tree_full_pipeline`）且从不计时 | “1,000 末端 < 1 s”来自一台笔记本，**不是** CI 断言（G9），274 分类群以上的任何计时基准都不在 CI 中运行 |
 
-上表就是 `.github/workflows/ci.yml` 声明并在每次 push 与 pull request 时执行的产
-品矩阵；运行日志发布在仓库的 Actions 页面。矩阵之外的平台属于声明的支持目标，不是
+上表就是 `.github/workflows/ci.yml` 声明并在每次 push 与 pull request 时执行的
+矩阵；运行日志发布在仓库的 Actions 页面。矩阵之外的平台属于声明的支持目标，不是
 实证过的支持目标。
 
 ## 4. 外部工具——引用与假定的版本
@@ -138,7 +138,7 @@ python -m pytest            # 收集范围遵循 [tool.pytest.ini_options]：tes
 ## 6. 已纳入回归门槛的校正与 CI 行为
 
 下列每条行为都在 `tests/test_regressions_calibration_ci.py` 中拥有会在回归时失败
-的断言，因此它们不属于覆盖缺口；面向用户的完整描述以 `docs/parameters-zh.md` 与
+的断言，因此它们不属于覆盖缺口；面向用户的描述以 `docs/parameters-zh.md` 与
 `docs/methods-zh.md` 为准。
 
 | 已断言的行为 | 测试 |
@@ -147,11 +147,11 @@ python -m pytest            # 收集范围遵循 [tool.pytest.ini_options]：tes
 | `RV(R) = max(Vobs(R) - SV(R)/N, 0)` 按式 (9) 的逐谱系尺度计算，因此 msz236 的异质性分量在少位点区间为正，并随位点数增长饱和到 `Vobs(R)`；当夹取仍然生效时发出警告 | `test_rate_heterogeneity_variance_is_positive_at_low_site_counts`、`test_rate_heterogeneity_saturates_at_Vobs_as_sites_grow`、`test_clamp_warning_*` |
 | 钉在硬边界上的节点改按校正自身断定的不确定度报告，而不是宽度为 0 的区间，并标记 `se_reliable = False`，`notes` 列说明原因 | `test_pinned_nodes_get_the_calibration_uncertainty`、`test_midpoint_fixed_calibration_is_not_zero_width`、`test_unsatisfied_constraint_never_inverts_the_interval` |
 | 求导管线复现被校正记录的 `mean`、速率比保护阈值，以及 `method="effective"` 时的有效边界 | `test_arithmetic_point_estimate_gets_arithmetic_derivatives`、`test_effective_result_is_differentiated_along_its_effective_bounds`、`test_divergent_trial_ids_are_detected` |
-| 校正后的谱系速率与 RRF 速率分别命名，方差分解改用与 RRF 一致的定义 | `test_rrf_and_implied_rates_are_named_apart`、`test_variance_uses_the_rrf_rates_and_drops_lineages_without_duration`、`test_non_finite_rates_are_dropped_from_the_average` |
+| 校正后的谱系速率与 RRF 速率分别命名，方差分解使用与 RRF 一致的定义 | `test_rrf_and_implied_rates_are_named_apart`、`test_variance_uses_the_rrf_rates_and_drops_lineages_without_duration`、`test_non_finite_rates_are_dropped_from_the_average` |
 | 修复循环的逐轮嵌套检查之后追加一次全量复检：带负年龄或后代老于祖先的收敛解会报错并点名节点，因此随包的格式示例表在 `method="effective"` 下被拒绝而不是带着警告返回；与此同时可行示例仍以 `f = 371.59973111298007` 零违例求解 | `tests/test_calibration_ci_edges.py::test_effective_method_rejects_the_non_nested_format_demo`、`::test_time_order_check_names_negative_and_inverted_nodes`、`::test_feasible_example_calibrations_still_solve_cleanly`、`e2e_tests/cases/test_02_calibration_ci.py::test_calibrate_effective_rejects_the_format_demo` |
 | 单侧边界集合在相对尺度上取其有限边界，于是同一物理约束以 Ma 与以 Ga 给出时年龄恰好相差 1000 倍；比未校正解更年轻的下界不再形同虚设 | `tests/test_calibration_ci_edges.py::test_one_sided_min_bound_below_the_uncalibrated_age_is_not_inert`、`::test_one_sided_max_bound_above_the_uncalibrated_age_does_not_inflate`、`::test_one_sided_bounds_are_invariant_to_the_time_unit` |
 | 密度行的有效边界落在该密度自己的 2.5/97.5 分位数之内；钉在边界上的节点不再被写进 `notes` 列成“求解器未达约束” | `tests/test_calibration_ci_edges.py::test_calibration_by_taxon_set_and_effective`、`::test_node_on_its_bound_is_not_reported_as_unsatisfied`、`::test_genuinely_unsatisfied_constraint_is_still_flagged` |
-| 枝长超出每位点置换数的合理范围时只发出一次警告、不改动估计量，因为式 (14) 让绝对半宽依赖输入单位 | `tests/test_calibration_ci_edges.py::test_off_scale_branch_lengths_are_warned_once` |
+| 枝长超出每位点置换数范围时只发出一次警告、不改动估计量，因为式 (14) 让绝对半宽依赖输入单位 | `tests/test_calibration_ci_edges.py::test_off_scale_branch_lengths_are_warned_once` |
 
 面向用户的相应说明见 `docs/parameters-zh.md`（*校正*、*置信区间*两节）与
 `docs/methods-zh.md`（§4）。

@@ -73,4 +73,4 @@ Rscript reproduce/golden_r3f.R --dry-run                       # 只做解析，
 **R 环境没有被锁定。** `reproduce/` 不附带 `renv.lock`，而 R3F 在上述提交里也只有
 `renv/activate.R` 与 `renv/settings.dcf`——同样没有 lock 文件——所以本页开头那份版本
 清单就是这些文件的完整记录。在与该环境不同的栈上重新生成，末位数字可能不同，那就
-需要为它另写一条溯源记录。
+需要为它另写一条来源记录。

@@ -93,7 +93,7 @@ Windows（`windows-latest`）以一个独立作业在 Python 3.13 上同时运�
 **OpenRelTime Studio** 是一款原生桌面程序，面向偏好图形化点选操作的研究者：加载
 Newick 或 NEXUS 树，运行 RRF，在画布上点选内部节点设置校正点，然后依次完成校
 正、解析置信区间、CorrTest 与 ddBD。全部计算都经由本引擎的公开 Python API 执
-行，结果可导出为 CSV、NEXUS、JSON 和 PNG 四种格式，并生成可复现的等效命令行。
+行，结果可导出为 CSV、NEXUS、JSON 和 PNG 四种格式，并提供可复现的等效命令行面板。
 界面完整支持中英双语并即时切换，内置浅色/深色两套主题、手绘矢量 SVG 图标，
 以及一棵自带演示校正点的内置示例树，初次使用无需自备数据。
 
@@ -146,7 +146,7 @@ openreltime blb -a alignment.fasta --iqtree iqtree --seed 42 -o blb_out
   同时支持 msz236 的有效边界（effective bounds）重采样法。
 - **解析置信区间**：实现 msz236 的 delta 方法（微分法，式 7～14）。抽样方差
   按显式提供的枝长方差 → Poisson 近似 → 零 的顺序取第一个已提供的来源，结果按硬
-  边界截断。有效边界法的重抽样复制还给出经验的节点年龄 CI。
+  边界截断。有效边界法的重采样复制还给出经验的节点年龄 CI。
 - **CorrTest**：基于已发表的固定系数逻辑回归模型的速率自相关检验（Tao et al. 2019）。
 - **ddBD**：为贝叶斯定年估计出生-死亡物种分化树先验（出生率、死亡率、
   抽样比例）。
@@ -207,7 +207,7 @@ node_id	taxon_set	min_bound	max_bound	density	density_params
 python -m pytest tests/
 ```
 
-- **G1**：3 与 4 分类群手算金标准值（两套均值约定，误差 < 1e-12）；
+- **G1**：3 与 4 分类群 RRF 手算金标准值（两套均值约定，误差 < 1e-12）；
 - **G2a 与 G2b**：274 分类群哺乳动物基准树与 R3F 回归（自动验收门槛的判据为
   斜率 ≥ 0.999、中位相对偏差 ≤ 1e-6；实测中位为速率 6.8e-16、时间 8.7e-16）；
 - **G2c**：NEXUS `[&rate=...]` 往返互操作；
@@ -224,7 +224,7 @@ python -m pytest tests/
 
 | 文档 | 内容 | English |
 |---|---|---|
-| [docs/usage-zh.md](docs/usage-zh.md) | 使用说明（全部子命令、输出文件、FAQ 与报错对照） | [docs/usage-en.md](docs/usage-en.md) |
+| [docs/usage-zh.md](docs/usage-zh.md) | 详细使用说明（全部子命令、输出文件、FAQ 与报错信息） | [docs/usage-en.md](docs/usage-en.md) |
 | [docs/parameters-zh.md](docs/parameters-zh.md) | 参数手册（全部可选参数，含各子命令选项对照表） | [docs/parameters.md](docs/parameters.md) |
 | [docs/methods-zh.md](docs/methods-zh.md) | 方法、假设与局限 | [docs/methods.md](docs/methods.md) |
 | [docs/validation-zh.md](docs/validation-zh.md) | 验证门槛、覆盖缺口与已测平台 | [docs/validation.md](docs/validation.md) |
@@ -232,12 +232,12 @@ python -m pytest tests/
 | [docs/adr/README-zh.md](docs/adr/README-zh.md) | 架构决策记录（ADR）索引 | [docs/adr/README.md](docs/adr/README.md) |
 | [CHANGELOG-zh.md](CHANGELOG-zh.md) | 版本记录 | [CHANGELOG.md](CHANGELOG.md) |
 | [THIRD-PARTY-NOTICES-zh.md](THIRD-PARTY-NOTICES-zh.md) | 参考材料与被改造的常数，逐来源说明 | [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) |
-| [data/PROVENANCE-zh.md](data/PROVENANCE-zh.md) | 随包第三方文件的来源、许可与引用 | [data/PROVENANCE.md](data/PROVENANCE.md) |
+| [data/PROVENANCE-zh.md](data/PROVENANCE-zh.md) | 每一个随包第三方文件的来源、许可与引用 | [data/PROVENANCE.md](data/PROVENANCE.md) |
 
 ## 许可与复用
 
 本项目采用 GPL-3.0-or-later（见 `LICENSE`）。对 R3F、MEGA 源码与 ape 的行为
-参考与常数引用，逐项记录在 `THIRD-PARTY-NOTICES-zh.md`。数据许可见
+参考，记录在 `THIRD-PARTY-NOTICES-zh.md`；随包第三方文件的逐文件来源说明见
 `data/PROVENANCE-zh.md`。CorrTest 仓库没有提供许可证，本项目未复制它的任何代码，
 只引用 Tao et al. (2019) 已发表的常数。
 

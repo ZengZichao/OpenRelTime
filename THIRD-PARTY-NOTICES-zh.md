@@ -31,7 +31,7 @@ GPL-3 §4/§5 的要求，同时落实项目的许可决策 ADR-003（索引见
 * 仓库：<https://github.com/KumarMEGALab/MEGA-source-code>
 * 查阅的文件：`MEGA12.1-source/reltime/mreltimecomputer.pas`
   （`TimeFactor`/`MinTimeFactor`/`MaxTimeFactor` 可行性设计与
-  `PropagateConstraints`）、`mcalibrationsampler.pas`（有效边界重抽样复制循环）。
+  `PropagateConstraints`）、`mcalibrationsampler.pas`（有效边界重复抽样循环）。
 * 复用性质：仅为设计层面（L2）。`openreltime/calibrate.py` 中的校正求解器围绕同一
   个全局因子概念，是对已发表描述（msz236）的独立实现。未转录任何 Pascal 代码。
 * 版权：(c) Sudhir Kumar, Koichiro Tamura, Glen Stecher 及 MEGA 开发团队。GPL-3.0。

@@ -203,9 +203,9 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   * 有效边界的密度抽样（`method="effective"`）用 `numpy.random.default_rng(seed)`，
     记录在 `calibrate` 块；
   * CorrTest 的姊妹枝（sister branch；API `sister_resample > 0`，CLI
-    `--sister-resample`）重抽样用 `numpy.random.default_rng(seed)`，记录在
+    `--sister-resample`）重采样用 `numpy.random.default_rng(seed)`，记录在
     `corrtest` 块；
-  * BLB 的重抽样与每次 IQ-TREE 的 `-seed` 用 `numpy.random.default_rng(seed)`，
+  * BLB 的重采样与每次 IQ-TREE 的 `-seed` 用 `numpy.random.default_rng(seed)`，
     记录在 `blb_report.json`。
 * `ci` 没有自己的种子：它用所跟随的那次 `calibrate` 运行记录的 `seed` 重新读
   树，并把它回写进自己的报告块。
@@ -298,7 +298,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
 
 ### `sister_resample`
 * 默认 `0`。末端数少于约 50 的树应使用 ≥ 50 次姊妹对（sister pair）分配
-  重抽样；取抽样间 Spearman rho 的均值（R3F 行为）。
+  重采样；取抽样间 Spearman rho 的均值（R3F 行为）。
 
 ### `anchor_node`、`anchor_time`
 * 默认：`anchor_node=None`、`anchor_time=0.0`（`corrtest.py:corrtest`）。
@@ -319,7 +319,7 @@ OpenRelTime 的每一个可选参数：语义、默认值、取值范围与使�
   `data/golden/r3f/example_corrtest_full_precision.txt`（由
   `reproduce/golden_r3f_fullprec.R` 捕获）。G6 断言与未舍入值逐位相等，并额外
   断言 CorrTest 所用的每个速率都等于引擎自己的逐节点速率。
-* 使用 `--sister-resample > 0` 时只能在 P 值档位上比较：R3F 的重抽样随机数来自
+* 使用 `--sister-resample > 0` 时只能在 P 值档位上比较：R3F 的重采样随机数来自
   R 的 RNG，即使种子相同，OpenRelTime 也无法逐位复现。
 
 ## ddBD（`ddbd`）

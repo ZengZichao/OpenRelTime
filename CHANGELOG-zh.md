@@ -54,7 +54,7 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
 - **CorrTest 的退化输入不再被判定为显著。** 未定义的 Spearman 相关系数此前被替换为
   `0.0` 再送入固定系数的逻辑回归模型，于是全零枝长的树会得到 `CorrScore ≈ 1`
   且落在 `P < 0.001` 档——用零信息给出最强结论。此类树现在被拒绝。
-- **拒绝 `n_effective=1`**，不再「跑 2 次却报告 1 次」。
+- **拒绝 `n_effective=1`**，不再静默地「跑 2 次却报告 1 次」。
 - **`openreltime.<module>` 名字遮蔽。** 包内重导出的函数与其同名模块互相遮蔽，
   导致 `openreltime.calibrate.Calibration` 抛 `AttributeError`。现在这些属性是
   可调用的模块对象：`openreltime.calibrate(...)` 与
@@ -70,8 +70,8 @@ OpenRelTime 遵循语义化版本规范。本文件记录各版本的发布内�
 
 - `blb` 与 `megacc` 现在写出 JSON 报告，并记录所调用外部程序的版本横幅，
   使运行结果可归因到具体的 IQ-TREE / MEGA-CC 构建。仍然不锁定任何版本。
-- 面向 FigTree 可读性的 NEXUS 结构测试（有根标记、`TAXA` 块无注释、每个节点
-  一条 `[&rate=...]`、枝长为有限数值、可被独立重解析），并显式测试普通 `.nwk`
+- 针对所输出 NEXUS 的 FigTree 可读性测试（有根标记、`TAXA` 块无注释、每个节点
+  一条 `[&rate=...]` 注释、枝长为有限数值、可被独立重解析），并显式测试普通 `.nwk`
   输出**不**携带速率注释。
 - `data/examples/example_calibrations_feasible.tsv`：一份真正可运行、彼此自洽的
   示例。原有 `example_calibrations.tsv` 只用于演示语法——它的纯密度行使其在默认
@@ -155,10 +155,10 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
 
 - **CorrTest**（`openreltime.corrtest`）：Tao et al. (2019) 的速率自相关统计量，
   采用已发表的固定系数逻辑回归模型，输出 P 值档位，小树可选姊妹对（sister pair，
-  `--sister-resample`）重抽样，并可选绝对速率锚定。
+  `--sister-resample`）重采样，并可选绝对速率锚定。
 - **ddBD**（`openreltime.ddbd`）：估计出生-死亡物种分化树先验（出生率、死亡率、抽
-  样比例），以 SSE/KL 打分的初值网格配合 L-BFGS-B 拟合，可选锚点节点与锚定时
-  间，并可绘制拟合密度。
+  样比例），以 SSE/KL 打分的初值网格配合 L-BFGS-B 拟合，可选锚点节点与锚定时间
+  缩放，并可绘制拟合密度。
 - **轻量自助重采样**（`openreltime.bootstrap`）：对比对做两级位点重采样，复制树由
   外部 IQ-TREE 可执行文件推断，节点年龄按单系群（clade）聚合为中位数与 2.5/97.5
   分位数，并附上包含该单系群的复制比例；运行种子会传给每一次 IQ-TREE 调用。
@@ -190,7 +190,7 @@ little bootstraps）管线。全部分析既可在 Python 中调用，也可在�
   `rates-times`、`calibrate`、`ci`、`corrtest`、`ddbd`）把自己的参数、警告与随机
   种子合并写入 `<prefix>_report.json`，共用同一前缀的每次运行各占一个顶层键；
   `ci` 会重放其 `calibrate` 运行记录下的设置。
-- **全部随机性**（密度抽样、BLB、姊妹重抽样）都经由同一个带种子的
+- **全部随机性**（密度抽样、BLB、姊妹重采样）都经由同一个带种子的
   `numpy.random.Generator`。
 
 ### 使用入口

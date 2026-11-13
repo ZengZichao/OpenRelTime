@@ -10,7 +10,7 @@
 
 ```
 e2e_tests/
-├── README.md                 # English readme
+├── README.md                 # 英文说明
 ├── README-zh.md              # 本说明
 ├── conftest.py               # 共享 fixture（测试数据夹具）、路径、CLI 运行器
 ├── data/
@@ -85,7 +85,7 @@ python -m pytest e2e_tests/ -v --html=e2e_tests/outputs/report.html
 |------|--------|----------|
 | `test_01_rrf_core.py` | 7 | `rates` / `times` CLI、金标准回归、输出文件、归一化、算术平均、速率比保护选项、NEXUS 往返 |
 | `test_02_calibration_ci.py` | 10 | `calibrate` bounds/effective、CI 默认/branch-var/n-sites、API 与 CLI 一致性、冲突校正、纯密度约束、钉住节点的标记 |
-| `test_03_corrtest_ddbd.py` | 7 | CorrTest 金标准回归、全精度 API、姊妹对重抽样；ddBD 金标准、anchor、plot、API/CLI 一致性 |
+| `test_03_corrtest_ddbd.py` | 7 | CorrTest 金标准回归、全精度 API、姊妹对重采样；ddBD 金标准、anchor、plot、API/CLI 一致性 |
 | `test_04_tree2table_monophyly.py` | 5 | `tree2table` 枝长与节点年龄；monophyly 自动/表格/临时分组 |
 | `test_05_cli_api_parity.py` | 4 | API 写出的结果与 CLI 一致、`_report.json` 合并、参数记录 |
 | `test_06_input_validation.py` | 8 | 负枝长、重复末端、多分叉、内群末端过少、外群不完整、空校正行、纯密度与方法冲突、缺失输入文件 |

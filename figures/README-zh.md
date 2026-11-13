@@ -9,7 +9,7 @@ OpenRelTime 论文四张插图的源代码与数据：**Figure 1**（分析流�
 
 | 文件 | 产出 |
 |---|---|
-| `make_figures.py` | 正文图1-分析流程图 (Figure 1) —— 同时提供 Figure S1 所调用的共享绘图引擎 |
+| `make_figures.py` | 正文图1-分析流程图 (Figure 1) —— 同时提供 Figure S1 所导入的共享绘图引擎 |
 | `附件图S1-软件架构图.py` | 附件图S1-软件架构图 (Figure S1) |
 | `附件图S2-性能对比图.py` + `附件图S2-性能对比图-data.json` | 附件图S2-性能对比图 (Figure S2) |
 | `附件图S3-置信区间图.py` + `附件图S3-置信区间图-data.json` | 附件图S3-置信区间图 (Figure S3) |
