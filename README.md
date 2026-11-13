@@ -268,9 +268,10 @@ only published constants of Tao et al. (2019) are used.
 王寅炤 (Yinzhao Wang) · [wyz@sjtu.edu.cn](mailto:wyz@sjtu.edu.cn) ·
 [ORCID 0000-0001-8715-1386](https://orcid.org/0000-0001-8715-1386)
 
-The preferred citation is recorded in [`CITATION.cff`](CITATION.cff). Cite
+The preferred citation is recorded in [`CITATION.cff`](CITATION.cff).  Cite
 [10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145), the engine's
-Zenodo *concept* DOI, for the software across versions;
-[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146) is the
-archived **v0.1.0** version record, and the matching version record for 0.1.1 is
-minted when the 0.1.1 release is cut.
+Zenodo *concept* DOI, for the software across versions; the archived Zenodo
+version records are
+[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146) for **v0.1.0**
+and
+[10.5281/zenodo.23356479](https://doi.org/10.5281/zenodo.23356479) for **v0.1.1**.

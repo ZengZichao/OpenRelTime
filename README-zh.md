@@ -254,6 +254,7 @@ python -m pytest tests/
 
 首选引用方式记录在 [`CITATION.cff`](CITATION.cff) 中。跨版本引用本软件整体请引用
 引擎的 Zenodo *concept* DOI
-[10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145)；
-[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146) 是已存档的
-**v0.1.0** 版本记录，0.1.1 对应的版本记录在切出 0.1.1 发布时生成。
+[10.5281/zenodo.23053145](https://doi.org/10.5281/zenodo.23053145)；各版本的
+Zenodo 存档记录分别为 **v0.1.0** 的
+[10.5281/zenodo.23053146](https://doi.org/10.5281/zenodo.23053146)，以及 **v0.1.1**
+的 [10.5281/zenodo.23356479](https://doi.org/10.5281/zenodo.23356479)。
